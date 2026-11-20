@@ -76,6 +76,12 @@ def fresh_page(tmp, name):
     d.mkdir()
     shutil.copytree(ROOT / "assets", d / "assets")
     shutil.copy(ROOT / "audit-overview.html", d / "audit-overview.html")
+    # empty the copy, independent of whatever data the real page holds
+    (d / "nothing.json").write_text("{}", encoding="utf-8")
+    p = subprocess.run([sys.executable, "-I", str(TOOLS / "import_data.py"), str(d / "nothing.json"), "--replace",
+                        str(d / "audit-overview.html")], capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    (d / "nothing.json").unlink()
     return d / "audit-overview.html"
 
 

@@ -15,7 +15,7 @@ A toolkit and working method to audit and tidy the customizations of your Claude
 | **Usage** | Counts how often skills, commands, agents and MCP tools were actually used in your sessions. |
 | **Version check** | Looks for newer versions of what you have installed and summarizes the changes; updates only on your request. Local plugins are checked offline by `check_versions.py`. |
 | **Changes since the last audit** | `diff_inventory.py` compares what is installed now with your overview page: new, gone, changed status, noticeably changed token cost. |
-| **MCP cost** | `mcp_cost.py` turns the output of your own `/context` run into the measured context cost of MCP servers, shown on the token card and in each server's details. |
+| **MCP cost** | `mcp_cost.py` turns the output of your own `/context` run into the measured context cost of MCP servers, shown on the token card and in each server's details. App text with one value per line works; claude.ai connector IDs from the CLI format are turned into names from the desktop app's local data (`--no-resolve` skips this). |
 | **History** | `history.py` stores a snapshot of your key numbers after each audit; from two snapshots on the token card shows a timeline. |
 | **Backup and restore** | `backup.py` copies what you are about to change to `~/.claude/backups/` with a manifest, and restores it after your confirmation. |
 | **Guided decisions** | Claude explains one customization at a time in a fixed structure and asks before it changes anything; a backup comes first. |
@@ -109,7 +109,7 @@ All scripts are in `tools/`, use only the Python standard library and are starte
 | `count_mcp_usage.py` | nothing | Counts calls per MCP server in your session transcripts. |
 | `diff_inventory.py` | nothing | Shows what changed since the last audit: new, gone, status, token change. |
 | `check_versions.py` | nothing | Offline version check of local plugins against the local marketplace copies. |
-| `mcp_cost.py` | the page, with `--write` | Reads the text of your own `/context` run and measures the context cost of MCP servers. |
+| `mcp_cost.py` | the page, with `--write` | Reads the text of your own `/context` run and measures the context cost of MCP servers; reads connector names from the desktop app's session files (read-only). |
 | `history.py` | the page | Appends a snapshot of your key numbers; `list` shows them. |
 | `backup.py` | `~/.claude/backups/`; on restore the original paths | Backs up files before a change, lists backups, restores them after confirmation. |
 | `build_overview.py` | the page | Rebuilds the generated parts of `audit-overview.html` from its data. |

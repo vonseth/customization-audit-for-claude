@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 1.4.1 – 2026-11-20
+
+### Fixed
+
+- `mcp_cost.py` now reads the Markdown tables that the command-line `/context` prints (`| MCP tools | 27.4k | 2.7% |`, `| mcp__server__tool | server | 3.1k |`).
+- `mcp_cost.py`: text copied from the desktop app with every column on its own line ("MCP tools", then the number, then the percent) is joined back into one line and parsed.
+- `mcp_cost.py --write`: the name before " (" (for example "Linear" for "Linear (Connector)") now counts only for one entry that is not removed, only if no entry matches the server exactly, and a connected entry wins over the others; otherwise the entries are listed and left unchanged. Symbols such as "®" are ignored when matching.
+- Tests (`test_mcp_cost.py`, `test_history.py`, `test_diff_inventory.py`, `test_update.py`) no longer depend on the data on the real page: they empty their own copy first, so they also pass when the page is filled.
+
+### Added
+
+- `mcp_cost.py`: connector IDs (UUIDs, as in the CLI format) are turned into connector names from the connector lists in the desktop app's local session files (`claude-code-sessions`, read-only, newest first, at most 200 files; only ID and name are used). Prints "Connector IDs resolved from local app data: N"; `--no-resolve` skips it. Tests with a fake home.
+
+### Changed
+
+- Glossary on the page (English and German) now covers every term of the manual's glossary.
+- One wording for the first-audit request everywhere: "Run the audit following docs/review-guide.md." (German page: „Führe das Audit nach der Prüfanleitung durch.“).
+- Manual and README: notes on pasting `/context` text, name matching, connector IDs, privacy statement for `mcp_cost.py`, new FAQ 31.
+- `test_update.py` checks the format of `VERSION` instead of a fixed number.
+
 ## 1.4.0 – 2026-11-20
 
 ### Added

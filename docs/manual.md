@@ -232,7 +232,15 @@ Claude then runs `python3 -I tools/mcp_cost.py <file>` (with `--write` to store 
 - **Deferred** = tools that are only loaded on demand. They cost nothing until used and are reported separately.
 - **Per server** the tool shows the number of tools and the total tokens of all its tools. These totals **cannot be split** into loaded and deferred, because `/context` lists each tool with its size but not which of them are loaded.
 
-Both the desktop app's copied text and the command line output are understood. The result appears in the MCP line of the token card and, per server, as "Context size (all tools)".
+Both the desktop app's copied text and the command line output are understood. Details that matter when you paste:
+
+- **App text with one value per line** works. If your copy puts every column on its own line ("MCP tools", then "27.378", then "2,7 %"), the tool joins them again.
+- **Symbols such as ®** in server names are ignored when matching.
+- **Matching to your entries:** a server is matched to an entry of the same name (case, spaces and punctuation ignored). If none matches exactly, the part of an entry's name before " (" counts, for example "Linear" for "Linear (Connector)". That fallback applies only if it points to exactly one entry that is not removed (a connected one wins over one that is not signed in); otherwise the entries are listed and left unchanged.
+- **Different names are not matched.** "Meetings" and "Claude Meetings" are two names. Rename the entry like the server, or set the value by hand.
+- **Connector IDs:** in the command line format, claude.ai connectors appear under an ID (a long string with hyphens) instead of their name. The tool looks the names up in the connector lists the desktop app keeps in its local session files (read-only, only ID and name are taken, nothing else is shown) and prints "Connector IDs resolved from local app data: N". `--no-resolve` switches this off; IDs that cannot be found stay as they are.
+
+The result appears in the MCP line of the token card and, per server, as "Context size (all tools)".
 
 **Then you decide, one item at a time.** Claude goes through the customizations in a fixed structure ([explanation template](explanation-template.md)): what it is, what it contains, what it costs, whether it fits what you do, overlaps, risks, what speaks for it, and a recommendation. Security findings come first, then new versions, then the biggest context items, then the rest. After each explanation Claude waits for your answer. You can ask questions at any time.
 
@@ -448,7 +456,7 @@ The import file is never modified. Exporting and importing again gives a byte-id
 
 - **What the tools read.** Only local files: `~/.claude` (plugins, settings, your skills and agents, session transcripts, history) and the Claude desktop app's data folder (plugin lists, claude.ai skills). The usage counters read your transcripts and report names and numbers only, never the contents.
 - **What they write.** Inside this project folder only, with one exception. The inventory, counters, `diff_inventory.py` and `check_versions.py` only read; the build script, `tools/sample_data.py`, `tools/import_data.py`, `tools/history.py` and `tools/mcp_cost.py --write` write only the overview page; the optional output file of the inventory goes where you tell it. **The exception is `tools/backup.py`** (which `update.py` also calls for its full backup before an update; `update.py` itself writes only inside the project folder)**:** it writes backups to `~/.claude/backups/` and, when you restore a backup and confirm, to the original paths listed in that backup's manifest. It never deletes your files (it only removes its own unfinished backup folder after a failed create) and refuses manifests that point outside your home folder.
-- **Your own `/context` output.** `mcp_cost.py` only reads text you give it. It never starts Claude and never reads `~/.claude`.
+- **Your own `/context` output.** `mcp_cost.py` reads the text you give it. It never starts Claude and never reads `~/.claude`. Only to turn connector IDs into names does it read, without changing anything, the connector lists in the session files of the desktop app (`claude-code-sessions`); it takes nothing but ID and name from them. `--no-resolve` skips this.
 - **Network.** Only `tools/update.py` uses the network, and only when you run `check` or `apply` without a ZIP file: read-only GET requests to api.github.com for the latest release of this project and the download of that release. Nothing is uploaded. A `GITHUB_TOKEN` (private repositories) goes only to api.github.com. All other tools use no network. The overview page has no external resources; its stylesheet and fonts are embedded.
 - **Backups.** Before every change Claude saves what it is about to change to `~/.claude/backups/<reason>-<date>/` on your computer. A restore overwrites files only after your explicit confirmation.
 - **Nothing is sent to third parties by this project.** The reports and the overview stay on your computer; what you share is up to you. Note that the audit runs in your own Claude session as usual, so what Claude reads in a session is processed like any other session content.
@@ -549,6 +557,9 @@ Run `python3 -I tools/update.py rollback`. It shows what will be restored, asks 
 
 **30. "The data has schema version N, but these tools only know up to M".**
 Your page data was written by a newer version of the tools than the one you are running (for example after copying a page from a newer copy). Update the tools first with `python3 -I tools/update.py check` and `apply`; do not edit the number by hand.
+
+**31. `mcp_cost.py` did not set the value on my entry, or shows an ID instead of a name.**
+The name must match the server (see "Details that matter when you paste" in [section 4](#4-running-an-audit)): "Meetings" does not match "Claude Meetings", and "Linear" for "Linear (Connector)" only works if that is the only fitting entry that is not removed. Rename the entry like the server or set the value by hand. An ID instead of a name means the desktop app's local data does not know that connector, or you used `--no-resolve`; the same fix applies.
 
 ---
 

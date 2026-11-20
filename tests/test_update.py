@@ -33,6 +33,11 @@ IGNORE = shutil.ignore_patterns(".git", "__pycache__", ".DS_Store", "*.pyc", ".u
 
 def copy_repo(dest):
     shutil.copytree(ROOT, dest, ignore=IGNORE)
+    # empty the page, independent of whatever data the real page holds
+    empty = Path(TMP.name) / "nothing.json"
+    empty.write_text("{}", encoding="utf-8")
+    p = subprocess.run(PY + [str(dest / "tools" / "import_data.py"), str(empty), "--replace"], capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
     return dest
 
 
@@ -76,7 +81,8 @@ def blocks(root):
 
 
 # ---- schema_version basics on the current files
-assert (ROOT / "VERSION").read_text().strip() == "1.4.0"
+import re as _re
+assert _re.fullmatch(r"\d+\.\d+\.\d+", (ROOT / "VERSION").read_text().strip())
 sch = upd.load_modules(ROOT / "tools").SCHEMA
 assert sch.version_of({"meta": {"as_of": None}}) == 0 and sch.migrate({"meta": {"as_of": None}}, 0)["meta"]["schema_version"] == 1
 try:

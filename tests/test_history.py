@@ -14,6 +14,12 @@ PY = [sys.executable, "-I"]
 TMP = tempfile.TemporaryDirectory()
 W = Path(TMP.name).resolve()
 shutil.copytree(ROOT / "assets", W / "assets")
+# an empty page, independent of whatever data the real page holds
+EMPTY_PAGE = W / "empty-template.html"
+shutil.copyfile(ROOT / "audit-overview.html", EMPTY_PAGE)
+(W / "nothing.json").write_text("{}", encoding="utf-8")
+assert subprocess.run(PY + [str(ROOT / "tools" / "import_data.py"), str(W / "nothing.json"), "--replace", str(EMPTY_PAGE)],
+                      capture_output=True).returncode == 0
 
 
 def run(script, *args):
@@ -23,7 +29,7 @@ def run(script, *args):
 
 def fresh(name):
     page = W / name
-    shutil.copyfile(ROOT / "audit-overview.html", page)
+    shutil.copyfile(EMPTY_PAGE, page)
     assert run("sample_data.py", "load", page)[0] == 0
     return page
 
@@ -101,7 +107,7 @@ for broken, why in ((base[::-1], "sorted"), (base + [base[-1]], "unique"),
 
 # a snapshot needs measured tokens: the empty page refuses
 empty = W / "empty.html"
-shutil.copyfile(ROOT / "audit-overview.html", empty)
+shutil.copyfile(EMPTY_PAGE, empty)
 rc, out = run("history.py", "snapshot", empty)
 assert rc == 1 and "no measured tokens" in out, out
 
@@ -111,7 +117,7 @@ exp = W / "export.json"
 assert run("import_data.py", "--export", exp, page)[0] == 0
 assert len(json.loads(exp.read_text(encoding="utf-8"))["history"]) == 4
 other = W / "e.html"
-shutil.copyfile(ROOT / "audit-overview.html", other)
+shutil.copyfile(EMPTY_PAGE, other)
 rc, out = run("import_data.py", exp, other)
 assert rc == 0, out
 assert history_block(other) == history_block(page) and rows(other) == (4, True)

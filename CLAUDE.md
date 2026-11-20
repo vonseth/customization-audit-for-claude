@@ -16,7 +16,7 @@ If `audit-overview.html` holds no data (all data blocks empty) and no sample, as
 
 - Sample first: run `python3 -I tools/sample_data.py load`, tell the user to open `audit-overview.html`, and explain what they see. When they are done, run `python3 -I tools/sample_data.py remove`.
 - Remind the user to **remove the sample before the real audit** (`python3 -I tools/sample_data.py status` shows whether it is loaded).
-- First audit: follow `docs/review-guide.md`.
+- First audit (the user says "Run the audit following docs/review-guide.md."): follow `docs/review-guide.md`.
 
 ## Tools
 
@@ -29,7 +29,7 @@ All in `tools/`, started as `python3 -I tools/<name>.py`; the first lines of eac
 | `count_usage.py`, `count_mcp_usage.py` | Usage counts from the transcripts (names and numbers only) |
 | `diff_inventory.py` | What changed since the last audit; run first in every audit |
 | `check_versions.py` | Offline version check of local plugins; agent L only for the rest and for "unknown" |
-| `mcp_cost.py` | MCP context cost from the user's pasted `/context` output |
+| `mcp_cost.py` | MCP context cost from the user's pasted `/context` output (also resolves connector IDs from local app data, read-only) |
 | `history.py` | `snapshot` after an audit, `list` |
 | `backup.py` | `create` before a change, `list`, `show`, `restore` |
 | `build_overview.py`, `check_overview.py` | Build and verify the page |
@@ -49,7 +49,7 @@ All in `tools/`, started as `python3 -I tools/<name>.py`; the first lines of eac
 8. **Keep the overview current.** Before an audit counts as finished, run `python3 -I tools/check_overview.py --strict --inventory reports/inventory.tsv` (create the file first with `python3 -I tools/inventory.py reports/inventory.tsv`) and fix everything it reports.
 9. **Desktop-app plugins and claude.ai skills** are removed by the user in the app; local plugins by Claude with the `claude plugin` command. Never uninstall Claude Code with Homebrew `--zap`.
 10. **Start an audit with `python3 -I tools/diff_inventory.py`** (changes since the last audit). Check local plugin versions with `python3 -I tools/check_versions.py` (offline); give the version agent only desktop plugins, claude.ai skills and the plugins reported as "unknown".
-11. **MCP cost only from the user's pasted `/context` output.** Never run `/context` yourself. Ask the user to run it in a new Claude Code session, expand "MCP tools" and paste the text or a file, then run `python3 -I tools/mcp_cost.py <file> --write` (file before `--write`). Permanent = loaded MCP tools + server instructions; deferred only on demand; per-server totals cannot be split.
+11. **MCP cost only from the user's pasted `/context` output.** Never run `/context` yourself. Ask the user to run it in a new Claude Code session, expand "MCP tools" and paste the text or a file, then run `python3 -I tools/mcp_cost.py <file> --write` (file before `--write`). Permanent = loaded MCP tools + server instructions; deferred only on demand; per-server totals cannot be split. Connector IDs (UUIDs) are resolved to names from the desktop app's local session files; `--no-resolve` skips this.
 12. **After an audit** (numbers final, check passed) run `python3 -I tools/history.py snapshot`.
 13. **Write decisions down immediately** in this file, the report or the overview, not only in the chat.
 14. **Run `update.py` only on the user's request.** `python3 -I tools/update.py check` and `apply` use the network (read-only, api.github.com); `apply` and `rollback` ask the user for a confirmation: never answer that question yourself and never pass `--yes`. Keep the `USER:START` / `USER:END` markers in this file intact; what stands between them belongs to the user and is carried over by an update. Git checkouts: `git pull`, then `update.py migrate`.
