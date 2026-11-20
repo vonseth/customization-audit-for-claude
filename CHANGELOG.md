@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 1.0.1 – 2026-11-20
+
+### Fixed
+
+- Big numbers in the token card and the key-figure cards rendered at label size, and the overlap legend showed two color squares per item: three style rules also matched the language spans inside the numbers and labels. They now apply to direct children only.
+
 ## 1.0.0 – 2026-11-20
 
 ### Added
