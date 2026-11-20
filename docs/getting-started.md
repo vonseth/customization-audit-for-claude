@@ -61,6 +61,17 @@ python3 -I tools/sample_data.py remove
 
 `python3 -I tools/sample_data.py status` tells you whether sample data is currently on the page. While it is loaded, the page shows a notice at the top. **Remove the sample before your real audit**, otherwise fictional entries mix with yours.
 
+### Moving existing data in
+
+If you already did an audit (for example in an earlier download of this project), you do not have to redo it. Export the data from the old copy and import it into the new one:
+
+```text
+python3 -I tools/import_data.py --export my-audit.json     # in the OLD copy: writes the data of audit-overview.html
+python3 -I tools/import_data.py ../my-audit.json           # in the NEW copy: validates, writes the blocks, builds the page
+```
+
+The import checks the file against the schema first (in a temporary copy) and changes nothing if anything is wrong. It refuses to run while the page holds data, sample or your own; add `--replace` to overwrite it (remove the sample this way). The file is never modified, so it doubles as a backup. The file contains your own data: keep it out of any public repository. Afterwards run `python3 -I tools/check_overview.py`. Your reports in `reports/`, `CLAUDE.md` decisions and `assets/` are not part of the file; copy them by hand if you want them in the new copy.
+
 ## 5. Open the overview page
 
 Open `audit-overview.html` in your browser (double-click the file). The key figures are at the top; click an entry in the list to see its details and the recommendation. The page shows English or German depending on your browser language; the DE | EN toggle in the top bar switches it.

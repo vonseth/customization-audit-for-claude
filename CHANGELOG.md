@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 1.1.0 – 2026-11-20
+
+### Added
+
+- `tools/import_data.py`: imports audit data from a JSON file (same shape as `examples/sample-data.json`) into a fresh download, so an existing review does not have to be repeated; `--export` writes the current page data to such a file (backup, moving to a newer download). Validates on a temporary copy first, refuses to overwrite existing data without `--replace`, never changes the input file.
+- Documentation: "Moving existing data in" in Getting started and Overview structure, one line in the README.
+
 ## 1.0.3 – 2026-11-20
 
 ### Changed

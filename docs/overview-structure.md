@@ -97,6 +97,15 @@ Options:
 - `--strict`: warnings about missing files or fonts become failures.
 - `--inventory <file.tsv>`: also compares the page with the inventory written by `tools/inventory.py` (a customization in the inventory but not on the page is a failure; the reverse is a warning).
 
+## Moving existing data in
+
+```text
+python3 -I tools/import_data.py --export <file.json> [page]      # write the data blocks of the page to a JSON file
+python3 -I tools/import_data.py <file.json> [--replace] [page]   # import such a file into a page and rebuild
+```
+
+The JSON file has the shape of `examples/sample-data.json`: one key per data block (`meta`, `plugins`, `claudeai-skills`, `mcp`, `builtin`, `candidates`, `overlaps`, `open-items`, `tokens`); a missing block counts as empty, an unknown key is an error. The import first writes the blocks into a temporary copy of the page and builds it there, so schema errors are reported without touching your page. It refuses to run when the page already holds data (sample or real) unless `--replace` is given, and it never modifies the input file. Exporting and importing the result again gives a byte-identical page. Use it to back up your data or to move it into a newer download of the project.
+
 ## Sample data
 
 A fictional data set shows what a filled page looks like:

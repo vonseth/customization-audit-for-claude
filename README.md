@@ -26,6 +26,8 @@ Or, if you know git: `git clone https://github.com/vonseth/customization-audit-f
 4. Tell Claude: "Start the customization audit." Claude first asks whether you want to see the sample overview or begin the first audit.
 5. Open `audit-overview.html` in your browser. For your first real audit say: "Run the audit following docs/review-guide.md."
 
+Already have audit data from an earlier download? Move it in with `python3 -I tools/import_data.py <file.json>` instead of repeating the first review (see "Moving existing data in" in [docs/getting-started.md](docs/getting-started.md)).
+
 The full walkthrough, including troubleshooting, is in [docs/getting-started.md](docs/getting-started.md).
 
 ## Platform support

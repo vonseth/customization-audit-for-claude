@@ -6,7 +6,9 @@ Answer in the language the user writes in.
 
 ## What this project is
 
-An unofficial tool (not affiliated with Anthropic) to audit and tidy Claude customizations: plugins, skills and MCP servers. The method is in `docs/review-guide.md`; the overview page is `audit-overview.html`, built from JSON data blocks by `tools/build_overview.py` and checked by `tools/check_overview.py` (structure: `docs/overview-structure.md`). All tools are read-only except the build script and `tools/sample_data.py`.
+An unofficial tool (not affiliated with Anthropic) to audit and tidy Claude customizations: plugins, skills and MCP servers. The method is in `docs/review-guide.md`; the overview page is `audit-overview.html`, built from JSON data blocks by `tools/build_overview.py` and checked by `tools/check_overview.py` (structure: `docs/overview-structure.md`). All tools are read-only except the build script, `tools/sample_data.py` and `tools/import_data.py`.
+
+`tools/import_data.py` moves audit data between pages: `python3 -I tools/import_data.py <file.json> [--replace]` imports a JSON file in the shape of `examples/sample-data.json`, `python3 -I tools/import_data.py --export <file.json>` writes the current page data out (backup, or moving to a newer download). Never put such a file with personal data into a public repository.
 
 ## FIRST RUN
 
