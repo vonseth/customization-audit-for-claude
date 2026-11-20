@@ -87,6 +87,7 @@ data-open-items   list of T   open points, one card each (remove done items inst
 data-tokens   object or null (null = nothing measured yet)
   now*           int      measured permanent tokens per session
   first_audit    int|null value at the first audit (null = show only "now")
+  first_audit_estimated  bool  true = the first-audit value is an estimate (label "estimated"), default false ("measured")
   measured_on    string ISO date or null
   parts          list of {"label": T, "tokens": int} (max 4), the stacked bar; shares come from the tokens
   note           T        extra text under the card
@@ -355,13 +356,17 @@ def validate_overlaps(raw):
 def validate_tokens(raw):
     if raw is None:
         return None
-    if not isinstance(raw, dict) or set(raw) - {"now", "first_audit", "measured_on", "parts", "note"}:
-        raise Fail("data-tokens: null or an object with now, first_audit, measured_on, parts, note expected")
+    if not isinstance(raw, dict) or set(raw) - {"now", "first_audit", "first_audit_estimated", "measured_on", "parts", "note"}:
+        raise Fail("data-tokens: null or an object with now, first_audit, first_audit_estimated, measured_on, parts, note expected")
     if "now" not in raw:
         raise Fail("data-tokens: required key 'now' is missing")
     out = {"now": conv(raw["now"], I, "data-tokens, key now")}
     fa = raw.get("first_audit")
     out["first_audit"] = None if fa is None else conv(fa, I, "data-tokens, key first_audit")
+    est = raw.get("first_audit_estimated", False)
+    if not isinstance(est, bool):
+        raise Fail("data-tokens: first_audit_estimated must be true or false")
+    out["first_audit_estimated"] = est
     out["measured_on"] = conv(raw.get("measured_on"), D, "data-tokens, key measured_on")
     out["note"] = conv(raw.get("note", ""), T, "data-tokens, key note")
     parts = raw.get("parts") or []
@@ -823,7 +828,7 @@ def tokens_markup(data):
     first = t["first_audit"]
     if first is not None:
         n = num(first, "~")
-        z.append('  <div class="value w-first"><span>%s</span><b>%s</b></div>' % (bi("at first audit", "beim ersten Audit"), bi(n.en, n.de)))
+        z.append('  <div class="value w-first"><span>%s</span><b>%s</b><span>%s</span></div>' % (bi("at first audit", "beim ersten Audit"), bi(n.en, n.de), bi("estimated", "geschätzt") if t["first_audit_estimated"] else bi("measured", "gemessen")))
         z.append('  <div class="arrow" aria-hidden="true">→</div>')
     n = num(t["now"], "~")
     z.append('  <div class="value w-now"><span>%s</span><b>%s</b><span>%s</span></div>'

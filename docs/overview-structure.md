@@ -59,7 +59,7 @@ At the end of the page, as `<script type="application/json" id="data-...">`. Unk
 | `data-candidates` | list | `name*`, `kind*` (`connector`, `mcp-server`, `plugin`, `skill`, `other`), `url*` (https), `kind_detail`, `provider`, `purpose`, `overlaps_with`, `note`, `discussed`, `removal_reason` |
 | `data-overlaps` | object | `measured_on`, `fields`: topics with `topic*`, `responsible`, and `members*` (`name*`, `tokens*`, `auto_start`, `role*`, `replaceable_by`, `uniqueness*` 1 to 5, `reason`) |
 | `data-open-items` | list | Open points, one card each (remove done items instead of marking them) |
-| `data-tokens` | object or null | `now*`, `first_audit`, `measured_on`, `parts` (max 4, for the stacked bar), `note` |
+| `data-tokens` | object or null | `now*`, `first_audit`, `first_audit_estimated` (true shows "estimated" under the first value, default "measured"), `measured_on`, `parts` (max 4, for the stacked bar), `note` |
 
 Rules worth knowing:
 

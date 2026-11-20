@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 1.0.2 – 2026-11-20
+
+### Added
+
+- `data-tokens.first_audit_estimated`: when true, the first-audit value is labelled "estimated" / "geschätzt", otherwise "measured" / "gemessen". The sample data uses it.
+
+### Fixed
+
+- Token card: label, number and note of both values now sit on the same lines, and the arrow is centred on the numbers.
+
 ## 1.0.1 – 2026-11-20
 
 ### Fixed

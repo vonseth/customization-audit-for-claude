@@ -1216,6 +1216,7 @@
   "tokens": {
     "now": 4200,
     "first_audit": 9800,
+    "first_audit_estimated": true,
     "measured_on": "2026-01-15",
     "parts": [
       {
