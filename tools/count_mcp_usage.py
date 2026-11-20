@@ -33,8 +33,10 @@ UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 
 
 def ts_of(v):
+    # Python 3.9 accepts only 3 or 6 fractional digits: pad or cut the fraction to 6
+    s = re.sub(r"\.(\d+)", lambda m: "." + (m.group(1) + "000000")[:6], str(v).replace("Z", "+00:00"), count=1)
     try:
-        t = datetime.datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+        t = datetime.datetime.fromisoformat(s)
     except ValueError:
         return None
     return t if t.tzinfo else t.replace(tzinfo=datetime.timezone.utc)
@@ -45,6 +47,13 @@ def fmt(t):
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(errors="backslashreplace")
+    if any(a in ("-h", "--help") for a in sys.argv[1:]):
+        print(__doc__)
+        sys.exit(0)
     current = sys.argv[1] if len(sys.argv) > 1 else None
     cut30 = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=30)
     base = paths.claude_dir() / "projects"

@@ -8,7 +8,7 @@ A toolkit and working method to audit and tidy the customizations of your Claude
 
 | Area | What it does |
 |---|---|
-| **Inventory** | Lists every plugin, skill, MCP server and connector: local, in the desktop app (per organization) and on claude.ai. |
+| **Inventory** | Lists your plugins, skills, agents, MCP servers and connectors: local, in the desktop app (per organization) and on claude.ai. `inventory.py` reads what is on disk; Claude adds claude.ai connectors and other MCP servers from your session. |
 | **Security review** | Checks hooks, network access, executed code and data flows of each customization, with a risk level and evidence. |
 | **Token cost** | Measures how much permanent context your customizations take in every session, before and after the audit. |
 | **Overlaps** | Groups customizations that do the same job and rates each one: core, complement or replaceable. |
@@ -45,20 +45,22 @@ The full walkthrough, including troubleshooting, is in [docs/getting-started.md]
 
 ## Updating
 
-Copies of version 1.3.0 or older do not contain `update.py` yet. For the first move to 1.4.0, download 1.4.0 and use the manual path (export in the old copy, import in the new one, then copy `reports/` and your `CLAUDE.md` decisions by hand). From 1.4.0 on, `update.py` does this for you.
+Copies of version 1.3.0 or older do not contain `update.py` yet. For the first move, download the latest release (1.4.0 or newer) and use the manual path (export in the old copy, import in the new one, then copy `reports/` and your `CLAUDE.md` decisions by hand). From 1.4.0 on, `update.py` does this for you.
 
 To move your copy to a newer release, open a terminal in the project folder:
 
 1. **Check** what is new: `python3 -I tools/update.py check`. It shows the installed and the latest version and the release notes.
 2. **Apply** the update: `python3 -I tools/update.py apply`. You first see a preview (files replaced, added or removed; what is kept) and are asked to confirm. Then a full backup of the project folder is made, the files are replaced, your data is carried over (and migrated to the current data format if needed) and the page is rebuilt and checked. If anything fails, the backup is restored automatically.
 3. **Without network:** download the release ZIP by hand and run `python3 -I tools/update.py apply <release.zip>`.
-4. **Undo:** `python3 -I tools/update.py rollback` restores the state from before the last update (after a confirmation). Rollback also reverts reports and data created since the update (a safety backup is made first).
+4. **Undo:** `python3 -I tools/update.py rollback` restores the state from before the last update (after a confirmation; the preview lists the files created since the update that will be removed). Rollback also reverts reports and data created since the update (a safety backup is made first).
+
+**Security note:** `apply` installs and runs code from the downloaded release ZIP (it runs the new version's build, check and self-test). Only apply ZIPs from this project's GitHub releases; the ZIP is not signed.
 
 What is kept: your reports in `reports/`, all data on the overview page, the sections of your `CLAUDE.md` between the `USER:START` and `USER:END` markers, and any extra files outside the managed folders. Only text between the USER markers in `CLAUDE.md` is kept; put your own additions there. Text outside the markers is replaced. Extra files you added inside `tools/`, `tests/`, `assets/`, `docs/` or `examples/` are removed by an update; they show up in the preview and are in the backup.
 
 If you installed with git, run `git pull` and then `python3 -I tools/update.py migrate`; it only migrates the data format and adds the markers to `CLAUDE.md`. For a private repository set the environment variable `GITHUB_TOKEN`. Details and troubleshooting are in the [user manual](docs/manual.md#updating-to-a-new-version).
 
-You can still use export and import as a backup or to move your data by hand: `python3 -I tools/import_data.py --export my-audit.json` in the old copy, `python3 -I tools/import_data.py my-audit.json` in the new one (add `--replace` if the page already holds data). The export file describes your personal setup. Keep it private; never commit it to a public repository.
+You can still use export and import as a backup or to move your data by hand: `python3 -I tools/import_data.py --export my-audit.json` in the old copy (it refuses to overwrite an existing file unless you add `--force`), `python3 -I tools/import_data.py my-audit.json` in the new one (add `--replace` if the page already holds data). The export file describes your personal setup. Keep it private; never commit it to a public repository.
 
 ## Platform support
 
@@ -75,7 +77,7 @@ You can still use export and import as a backup or to move your data by hand: `p
 
 ## Privacy
 
-The tools only read local files. Everything they write stays inside this project folder, with one exception: `backup.py` (also called by `update.py` for its backup) writes backups to `~/.claude/backups/` and, when you restore a backup and confirm, to the original paths recorded in that backup. The only tool that uses the network is `update.py`, and only when you run `check` or `apply` without a ZIP file: it sends read-only GET requests to api.github.com for the latest release of this project and downloads that release; nothing is ever uploaded. `backup.py` remains the only tool that writes outside the project folder. For a private repository the token in `GITHUB_TOKEN` is sent only to api.github.com. Reports and the overview page stay on your computer; what you share is up to you. Claude itself runs in your own session as usual.
+The tools only read local files. Everything they write stays inside this project folder, with one exception: `backup.py` (also called by `update.py` for its backup) writes backups to `~/.claude/backups/` and, when you restore a backup and confirm, to the original paths recorded in that backup. The only tool that uses the network is `update.py`, and only when you run `check` or `apply` without a ZIP file: it sends read-only GET requests to api.github.com for the latest release of this project and downloads that release; nothing is ever uploaded. `backup.py` remains the only tool that writes outside the project folder. For a private repository the token in `GITHUB_TOKEN` is sent only to api.github.com. Reports and the overview page stay on your computer; what you share is up to you. The scripts do not use the network (except `update.py`). Claude itself runs in your own session as usual and, during an audit, may search the web for version notes and information about candidates; nothing from your setup is sent except search terms such as plugin names.
 
 ## Folder overview
 
@@ -92,7 +94,9 @@ The tools only read local files. Everything they write stays inside this project
 | `tools/` | Python scripts, see the table below |
 | `assets/` | Stylesheet and fonts of the overview page |
 | `examples/` | Fictional sample data |
-| `reports/` | Your audit report and sub-agent reports (created during the first audit) |
+| `tests/` | Tests for the tools, see "Running the tests" below |
+| `.github/` | GitHub settings (funding link); not part of the release ZIP |
+| `reports/` | Your audit report and sub-agent reports (filled during your audits) |
 | `DESIGN.md` | Design basis of the overview page |
 | `VERSION` | Installed version of the project (read by `update.py` and `backup.py`) |
 | `CHANGELOG.md` | Versions and changes |
@@ -103,21 +107,32 @@ All scripts are in `tools/`, use only the Python standard library and are starte
 
 | Tool | Writes | What it does |
 |---|---|---|
-| `inventory.py` | optional TSV file | Lists all plugins, skills, agents and MCP servers with description size and hooks. |
-| `check_desktop_plugin.py` | nothing | Checks whether a desktop plugin or claude.ai skill is still installed. |
-| `count_usage.py` | nothing | Counts skill, command and agent calls in your session transcripts (names and numbers only). |
+| `inventory.py` | the TSV file you name (optional) | Lists local and desktop-app plugins, claude.ai skills, your own skills and agents, and the MCP servers that plugins ship, with description size and hooks. Connectors and other MCP servers are not on disk; Claude collects them from the session. |
+| `check_desktop_plugin.py` | nothing | Checks whether a desktop plugin or claude.ai skill (skills-plugin folder) is still installed. Answers "Unknown" if a plugin list cannot be read. |
+| `count_usage.py` | nothing | Counts skill, command (each once) and agent calls in your session transcripts (names and numbers only). |
 | `count_mcp_usage.py` | nothing | Counts calls per MCP server in your session transcripts. |
 | `diff_inventory.py` | nothing | Shows what changed since the last audit: new, gone, status, token change. |
 | `check_versions.py` | nothing | Offline version check of local plugins against the local marketplace copies. |
 | `mcp_cost.py` | the page, with `--write` | Reads the text of your own `/context` run and measures the context cost of MCP servers; reads connector names from the desktop app's session files (read-only). |
 | `history.py` | the page | Appends a snapshot of your key numbers; `list` shows them. |
-| `backup.py` | `~/.claude/backups/`; on restore the original paths | Backs up files before a change, lists backups, restores them after confirmation. |
+| `backup.py` | `~/.claude/backups/`; on restore the original paths | Backs up files before a change (symlinks are stored as links), lists backups, restores them after confirmation (backups of folders outside your home folder only after an extra warning and confirmation; system folders are refused). |
 | `build_overview.py` | the page | Rebuilds the generated parts of `audit-overview.html` from its data. |
-| `check_overview.py` | nothing | Verifies the page (15 checks), including the documentation of the tools. |
+| `check_overview.py` | nothing | Verifies the page (14 checks, plus one more with `--inventory`), including the documentation of the tools. |
 | `sample_data.py` | the page | Loads, removes or reports the fictional sample data. |
-| `import_data.py` | the page | Imports audit data from a JSON file or exports it. |
+| `import_data.py` | the page; with `--export` a JSON file you name | Imports audit data from a JSON file or exports it. `--export` refuses to overwrite an existing file unless you add `--force`. |
 | `update.py` | project folder; backup through `backup.py` | Updates to the newest release (`check`, `apply`, `rollback`, `migrate`); the only tool that uses the network. |
 | `selftest.py` | temporary folder | Runs every tool against a fake home folder. |
+
+### Running the tests
+
+The tests are in `tests/`. Run each file on its own, or all of them in one line, then the self-test:
+
+```text
+for f in tests/test_*.py; do python3 -I "$f" || break; done
+python3 -I tools/selftest.py
+```
+
+The tests and the self-test work in a temporary fake home folder and never touch your real `~/.claude`.
 
 ## Support
 

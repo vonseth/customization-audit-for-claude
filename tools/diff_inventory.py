@@ -227,20 +227,24 @@ def report(res, empty_page, sample):
 
 
 def main(argv=None):
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(errors="backslashreplace")
     ap = argparse.ArgumentParser(description="Changes since the last audit (read-only).", add_help=True)
     ap.add_argument("page", nargs="?", default=DEFAULT_PAGE)
     ap.add_argument("--inventory", help="TSV from tools/inventory.py (default: scan now)")
     ap.add_argument("--threshold", type=float, default=20.0, help="token change in percent (default 20)")
     a = ap.parse_args(argv)
     if a.threshold < 0:
-        print("ERROR: --threshold must not be negative.")
+        print("ERROR: --threshold must not be negative.", file=sys.stderr)
         return 2
     try:
         sd = load_module("sample_data", "sample_data.py")
         with open(a.page, encoding="utf-8", newline="") as f:
             blocks = sd.read_blocks(f.read())
     except (OSError, SystemExit) as e:
-        print("ERROR: cannot read the page %s: %s" % (a.page, e))
+        print("ERROR: cannot read the page %s: %s" % (a.page, e), file=sys.stderr)
         return 2
     try:
         if a.inventory:
@@ -249,11 +253,11 @@ def main(argv=None):
         else:
             rows = scan_inventory()
     except (OSError, ValueError) as e:
-        print("ERROR: cannot read the inventory: %s" % e)
+        print("ERROR: cannot read the inventory: %s" % e, file=sys.stderr)
         return 2
     plugins, skills = blocks.get("plugins") or [], blocks.get("claudeai-skills") or []
     if not isinstance(plugins, list) or not isinstance(skills, list):
-        print("ERROR: the data blocks plugins / claudeai-skills of the page are not lists.")
+        print("ERROR: the data blocks plugins / claudeai-skills of the page are not lists.", file=sys.stderr)
         return 2
     empty_page = not plugins and not skills
     res = compare(rows, plugins, skills, a.threshold)

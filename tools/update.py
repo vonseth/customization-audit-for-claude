@@ -80,7 +80,7 @@ OPTIONAL_MANAGED = [".github", ".gitattributes"]  # replaced if the ZIP has them
 KEPT_TOP = {"reports", ".git", STATE, ".DS_Store", "__pycache__"}
 NOISE = {"__pycache__", ".DS_Store"}
 USER_SECTIONS = {"decisions": "## Decisions (kept deliberately)", "status": "## Status and open items"}
-MARK_RE = r"<!-- USER:START (%s) -->\n(.*?)<!-- USER:END \1 -->\n?"
+MARK_RE = r"<!-- USER:START (%s) -->\r?\n(.*?)<!-- USER:END \1 -->(?:\r?\n)?"
 
 
 class Stop(Exception):
@@ -140,11 +140,13 @@ def latest_release(fetcher):
 # ---------------------------------------------------------------- versions
 
 def parse_version(text):
-    """'1.4.0' -> sortable tuple; a pre-release suffix ('-beta') sorts before the release. None if unparsable."""
-    m = re.match(r"^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(-[0-9A-Za-z.-]+)?(?:\+.*)?$", (text or "").strip())
+    """'1.4.0' -> sortable tuple (semver precedence); a pre-release suffix ('-beta.1') sorts before the release,
+    numeric identifiers compare as numbers, others as text, and a shorter list is older. None if unparsable."""
+    m = re.match(r"^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?(?:\+.*)?$", (text or "").strip())
     if not m:
         return None
-    return (int(m.group(1)), int(m.group(2) or 0), int(m.group(3) or 0), 0 if m.group(4) else 1)
+    pre = tuple((0, int(i), "") if i.isdigit() else (1, 0, i) for i in m.group(4).split(".")) if m.group(4) else ()
+    return (int(m.group(1)), int(m.group(2) or 0), int(m.group(3) or 0), 0 if m.group(4) else 1, pre)
 
 
 def installed_version(root):
@@ -251,21 +253,28 @@ def extract_user_sections(text):
             found[name], how[name] = m.group(2), "markers"
             continue
         head = USER_SECTIONS[name]
-        m = re.search(r"^%s[ \t]*\n.*?(?=^## |\Z)" % re.escape(head), text, re.S | re.M)
+        m = re.search(r"^%s[ \t]*\r?\n.*?(?=^## |\Z)" % re.escape(head), text, re.S | re.M)
         if m:
-            found[name], how[name] = m.group(0).rstrip("\n") + "\n\n", "heading"
+            eol = "\r\n" if "\r\n" in m.group(0) else "\n"
+            found[name], how[name] = m.group(0).rstrip("\r\n") + eol + eol, "heading"
     return found, how
 
 
 def merge_user_sections(new_text, sections):
-    """Puts the user's sections into the new CLAUDE.md (inside its markers; appended if it has none)."""
+    """Puts the user's sections into the new CLAUDE.md (inside its markers; appended if it has none).
+
+    The user's own text keeps its line endings; the marker lines follow the file they are written into."""
+    file_eol = "\r\n" if "\r\n" in new_text else "\n"  # of the new file, before the user's text goes in
     for name, raw in sections.items():
         pat = re.compile(MARK_RE % re.escape(name), re.S)
-        block = "<!-- USER:START %s -->\n%s<!-- USER:END %s -->\n" % (name, raw if raw.endswith("\n") else raw + "\n", name)
-        if pat.search(new_text):
-            new_text = pat.sub(lambda m: block, new_text, count=1)
+        m = pat.search(new_text)
+        eol = ("\r\n" if m.group(0).split("\n", 1)[0].endswith("\r") else "\n") if m else file_eol
+        block = "<!-- USER:START %s -->%s%s<!-- USER:END %s -->%s" % (
+            name, eol, raw if raw.endswith("\n") else raw + eol, name, eol)
+        if m:
+            new_text = pat.sub(lambda mm: block, new_text, count=1)
         else:
-            new_text = new_text.rstrip("\n") + "\n\n" + block
+            new_text = new_text.rstrip("\r\n") + eol + eol + block
     return new_text
 
 
@@ -274,11 +283,12 @@ def add_markers(text):
     for name, raw_head in USER_SECTIONS.items():
         if re.search(MARK_RE % re.escape(name), text, re.S):
             continue
-        m = re.search(r"^%s[ \t]*\n.*?(?=^## |\Z)" % re.escape(raw_head), text, re.S | re.M)
+        m = re.search(r"^%s[ \t]*\r?\n.*?(?=^## |\Z)" % re.escape(raw_head), text, re.S | re.M)
         if m:
             sec = m.group(0)
-            text = text[:m.start()] + "<!-- USER:START %s -->\n%s<!-- USER:END %s -->\n" % (
-                name, sec if sec.endswith("\n") else sec + "\n", name) + text[m.end():]
+            eol = "\r\n" if "\r\n" in sec else "\n"
+            text = text[:m.start()] + "<!-- USER:START %s -->%s%s<!-- USER:END %s -->%s" % (
+                name, eol, sec if sec.endswith("\n") else sec + eol, name, eol) + text[m.end():]
     return text
 
 
@@ -326,7 +336,8 @@ def strip_version(blocks):
 def run_tool(root, script, *args):
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     p = subprocess.run([sys.executable, "-I", "-B", str(Path(root) / "tools" / script)] + list(args),
-                       capture_output=True, text=True, env=env, cwd=str(root))
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", env=env,
+                       cwd=str(root))
     return p.returncode, (p.stdout + p.stderr).strip()
 
 
@@ -363,17 +374,25 @@ def make_backup(root, reason, targets):
 def _sync_dir(src, dst):
     """Makes dst byte-identical to src (files and folders that are not in src are removed)."""
     src, dst = Path(src), Path(dst)
-    keep_files, keep_dirs = set(), set()
+    keep_files, keep_dirs, keep_links = set(), set(), {}
     for cur, dirs, files in os.walk(src):
         rel = Path(cur).relative_to(src).as_posix()
-        for d in dirs:
-            keep_dirs.add((Path(rel) / d).as_posix() if rel != "." else d)
-        for f in files:
-            keep_files.add((Path(rel) / f).as_posix() if rel != "." else f)
+        for n in dirs + files:
+            r = (Path(rel) / n).as_posix() if rel != "." else n
+            if (src / r).is_symlink():          # symlinks are recreated as links, never followed
+                keep_links[r] = os.readlink(src / r)
+            elif n in dirs:
+                keep_dirs.add(r)
+            else:
+                keep_files.add(r)
     for cur, dirs, files in os.walk(dst):
         rel = Path(cur).relative_to(dst)
         for d in list(dirs):
             r = (rel / d).as_posix()
+            if (dst / r).is_symlink():          # never write through a link: remove it (recreated below if kept)
+                (dst / r).unlink()
+                dirs.remove(d)
+                continue
             if r not in keep_dirs:
                 p = dst / r
                 shutil.rmtree(p) if not p.is_symlink() else p.unlink()
@@ -389,6 +408,33 @@ def _sync_dir(src, dst):
             if t.is_symlink() or t.exists():
                 t.unlink()
             shutil.copy2(s, t)
+    for r, target in sorted(keep_links.items()):
+        t = dst / r
+        if t.is_symlink() and os.readlink(t) == target:
+            continue
+        if t.is_symlink() or t.is_file():
+            t.unlink()
+        elif t.exists():
+            shutil.rmtree(t)
+        os.symlink(target, t)
+
+
+def check_entries(entries, expected, name):
+    """Validates the entries of a backup manifest before anything is written: original absolute, without "..",
+    and exactly the expected paths (this project); stored path inside the backup folder."""
+    if not isinstance(entries, list) or not entries:
+        raise Stop("the backup manifest has no entries")
+    for e in entries:
+        orig, stored = (e.get("original"), e.get("stored")) if isinstance(e, dict) else (None, None)
+        if not isinstance(orig, str) or not isinstance(stored, str) or (e or {}).get("type") not in ("file", "dir"):
+            raise Stop("the backup manifest is incomplete or malformed")
+        if not os.path.isabs(orig) or ".." in re.split(r"[\\/]", orig):
+            raise Stop("the backup manifest refers to an unsafe path: %s" % orig)
+        sp = os.path.normpath(stored)
+        if os.path.isabs(stored) or sp == ".." or sp.startswith(".." + os.sep):
+            raise Stop("the backup manifest refers to a stored path outside the backup: %s" % stored)
+    if sorted(os.path.abspath(e["original"]) for e in entries) != sorted(os.path.abspath(p) for p in expected):
+        raise Stop("the backup %s does not belong to this project folder" % name)
 
 
 def restore_backup(name, expected_originals):
@@ -398,20 +444,28 @@ def restore_backup(name, expected_originals):
         entries = json.loads((folder / backup.MANIFEST).read_text(encoding="utf-8"))["entries"]
     except Exception as e:
         raise Stop("the backup manifest is unreadable: %s" % e)
-    got = sorted(os.path.abspath(e["original"]) for e in entries)
-    if got != sorted(os.path.abspath(p) for p in expected_originals):
-        raise Stop("the backup %s does not belong to this project folder" % name)
+    check_entries(entries, expected_originals, name)
     backup.verify_stored(folder, entries)
     for e in entries:
         src, orig = folder / e["stored"], Path(e["original"])
         if e["type"] == "dir":
             _sync_dir(src, orig)
-            if backup.dir_files(orig) != e["files"]:
+            if backup.dir_files(orig) != e["files"] or backup.dir_links(orig) != e.get("links", {}):
                 raise Stop("restore verification failed for %s" % orig)
         else:
             shutil.copy2(src, orig)
             if backup.sha256(orig) != e["sha256"]:
                 raise Stop("restore verification failed for %s" % orig)
+
+
+def restore_or_hint(name, expected_originals):
+    """restore_backup, but a failure names the command that restores the backup by hand."""
+    try:
+        restore_backup(name, expected_originals)
+    except BaseException as e:
+        raise Stop("the automatic restore failed (%s). Your backup is intact in %s. Restore it by hand with: "
+                   "python3 -I \"%s\" restore %s (it asks first; files created since then are not removed)" % (
+                       e, backup.backups_dir() / name, HERE / "backup.py", name))
 
 
 def read_state(root):
@@ -432,6 +486,10 @@ def ask(prompt, stdin, yes):
     except Exception:
         answer = ""
     return answer in ("y", "yes")
+
+
+def usage_error():
+    print(__doc__, file=sys.stderr)
 
 
 def slug(v):
@@ -516,7 +574,7 @@ def cmd_apply(root, fetcher, stdin, args):
     downgrade = "--allow-downgrade" in args
     rest = [a for a in args if not a.startswith("--")]
     if len(rest) > 1 or any(a.startswith("--") and a not in ("--yes", "--allow-downgrade") for a in args):
-        print(__doc__)
+        usage_error()
         return 2
     if (root / ".git").exists():
         raise Stop("this folder is a git checkout. Update it with `git pull` (replacing files here would "
@@ -579,11 +637,7 @@ def cmd_apply(root, fetcher, stdin, args):
                 problem = "interrupted"
         if problem:
             print("The update failed:\n%s\nRestoring the backup ..." % problem)
-            try:
-                restore_backup(bk.name, [root])
-            except BaseException as e:
-                raise Stop("the automatic restore failed (%s). Your backup is intact: %s. Restore it by hand with "
-                           "python3 -I tools/backup.py restore %s" % (e, bk, bk.name))
+            restore_or_hint(bk.name, [root])
             print("Restored: the project folder is as it was before the update.")
             return 1
         (root / STATE).write_text(json.dumps({"backup": bk.name, "from": old_v, "to": new_v,
@@ -621,7 +675,7 @@ def _do_update(root, new_top, p, old_blocks, old_html, sections):
             f.unlink()
     shutil.copy2(new_top / PAGE, root / PAGE)
     sd = load_modules(root / "tools")
-    values = migrated(sd, {n: old_blocks[n] for n in sd.BLOCKS})
+    values = migrated(sd, {n: old_blocks.get(n, sd.EMPTY[n]) for n in sd.BLOCKS})
     html = rd(root / PAGE)
     wr(root / PAGE, sd.write_blocks(html, values))
     # rules: new text, old user sections
@@ -635,7 +689,7 @@ def cmd_rollback(root, stdin, args):
     with it, so a second rollback would revert an earlier update (after a confirmation)."""
     yes = "--yes" in args
     if [a for a in args if a != "--yes"]:
-        print(__doc__)
+        usage_error()
         return 2
     st = read_state(root)
     if not st:
@@ -646,24 +700,33 @@ def cmd_rollback(root, stdin, args):
         entries = json.loads((folder / backup.MANIFEST).read_text(encoding="utf-8"))["entries"]
     except Exception as e:
         raise Stop("the backup manifest is unreadable: %s" % e)
-    if len(entries) != 1 or os.path.abspath(entries[0]["original"]) != os.path.abspath(root):
+    check_entries(entries, [root], name)
+    if len(entries) != 1:
         raise Stop("the backup %s does not belong to this project folder" % name)
     backup.verify_stored(folder, entries)
     src = folder / entries[0]["stored"]
     old, cur = backup.dir_files(src), walk_all(root)
-    n_remove = sum(1 for r in cur if r not in old)
+    gone = sorted(r for r in cur if r not in old)
+    n_remove = len(gone)
     n_diff = sum(1 for r, h in old.items() if r in cur and cur[r] != h)
     n_new = sum(1 for r in old if r not in cur)
     print("Rollback to the state before the update from %s to %s (backup %s):\n"
           "  %d files are restored, %d recreated, %d files created since then are removed "
           "(a safety backup of the current state is made first)." % (
               st.get("from") or "unknown", st.get("to"), name, n_diff, n_new, n_remove))
+    if gone:
+        print("Files that exist now but not in the backup, and will be removed (reports or data created since "
+              "the update are among them; they stay in the safety backup):")
+        for r in gone[:30]:
+            print("      " + r)
+        if len(gone) > 30:
+            print("      ... and %d more" % (len(gone) - 30))
     if not ask("Roll back?", stdin, yes):
         print("Cancelled. Nothing was changed.")
         return 1
     safety = make_backup(root, "before-rollback", [root])
     print("Safety backup of the current state: %s" % safety)
-    restore_backup(name, [root])
+    restore_or_hint(name, [root])
     print("Rolled back to version %s." % (st.get("from") or "the previous one"))
     return 0
 
@@ -675,7 +738,7 @@ def walk_all(root):
 def cmd_migrate(root, stdin, args):
     yes = "--yes" in args
     if [a for a in args if a != "--yes"]:
-        print(__doc__)
+        usage_error()
         return 2
     page, rules = root / PAGE, root / RULES
     if not page.is_file():
@@ -684,16 +747,20 @@ def cmd_migrate(root, stdin, args):
     html = rd(page)
     blocks = read_blocks_lenient(sd, html)
     new_blocks = migrated(sd, blocks)
-    new_html = sd.write_blocks(html, new_blocks)
+    present = all(sd.pattern(n).search(html) for n in sd.BLOCKS)
+    page_current = present and sd.SCHEMA.version_of(blocks) == sd.SCHEMA.CURRENT
+    new_html = html if page_current else sd.write_blocks(html, new_blocks)  # current: leave the file as it is
     old_rules = rd(rules) if rules.is_file() else None
     new_rules = add_markers(old_rules) if old_rules is not None else None
     todo = []
     if new_html != html:
-        todo.append("page data: schema %d -> %d" % (sd.SCHEMA.version_of(blocks), sd.SCHEMA.CURRENT))
+        todo.append("page data: schema %d -> %d" % (sd.SCHEMA.version_of(blocks), sd.SCHEMA.CURRENT)
+                    if present else "page data: add the data blocks this version has and the page lacks")
     if new_rules is not None and new_rules != old_rules:
         todo.append("CLAUDE.md: add USER markers around the user sections")
     if not todo:
-        print("Nothing to migrate: the data format is current and CLAUDE.md has its markers.")
+        print("Already current, nothing to migrate: the data format is current and CLAUDE.md has its markers. "
+              "No file was changed.")
         return 0
     print("Migration (no files are replaced):\n  " + "\n  ".join(todo))
     if not ask("Migrate?", stdin, yes):
@@ -711,7 +778,7 @@ def cmd_migrate(root, stdin, args):
         problem = "%s: %s" % (type(e).__name__, e)
     if problem:
         print("The migration failed:\n%s\nRestoring the backup ..." % problem)
-        restore_backup(bk.name, targets)
+        restore_or_hint(bk.name, targets)
         print("Restored.")
         return 1
     print("Migrated. Backup: %s" % bk.name)
@@ -723,14 +790,20 @@ def main(argv=None, root=None, fetcher=None, stdin=None):
     root = Path(root).resolve() if root else HERE.parent
     fetcher = fetcher or http_fetch
     stdin = stdin or sys.stdin
-    if not args or args[0] in ("-h", "--help") or args[0] not in ("check", "apply", "rollback", "migrate"):
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
+    if any(a in ("-h", "--help") for a in args):
         print(__doc__)
-        return 0 if args and args[0] in ("-h", "--help") else 2
+        return 0
+    if not args or args[0] not in ("check", "apply", "rollback", "migrate"):
+        usage_error()
+        return 2
     cmd, rest = args[0], args[1:]
     try:
         if cmd == "check":
             if rest:
-                print(__doc__)
+                usage_error()
                 return 2
             return cmd_check(root, fetcher)
         if cmd == "apply":

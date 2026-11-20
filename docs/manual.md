@@ -190,7 +190,7 @@ A collapsible table of the files of this project with one line on each. If a fil
 
 ### 06 Glossary
 
-A collapsible list of the terms. A copy of it, extended, is in [section 9](#9-glossary) of this manual.
+A collapsible list of the terms. It has the same terms as [section 9](#9-glossary) of this manual.
 
 ### 07 Usage
 
@@ -211,7 +211,7 @@ This is what you experience. The method behind it is in the [review guide](revie
 **Then Claude, without changing anything:**
 
 1. First shows **what changed since the last audit** with `python3 -I tools/diff_inventory.py`: what is new, what is gone, what changed its status (for example disabled) and which token costs moved noticeably (at least 20 percent and 50 tokens). On a first audit it simply lists everything as new. Nothing is written.
-2. Takes an **inventory** of everything installed: local plugins, your own skills and agents, desktop-app plugins, claude.ai skills, MCP servers. It writes it to `reports/inventory.tsv`.
+2. Takes an **inventory**. `tools/inventory.py` lists local plugins, your own skills and agents, desktop-app plugins, claude.ai skills and the MCP servers that plugins ship, and writes them to `reports/inventory.tsv`. claude.ai connectors and other MCP servers are not on disk; Claude collects them from the session (see the review guide).
 3. Runs the **version check** for local plugins with `python3 -I tools/check_versions.py`. This works offline against the copies of the marketplaces that the app already keeps and answers "up to date", "newer available" or "unknown" per plugin. "Latest" means latest in that local copy; the tool fetches nothing. Desktop plugins and claude.ai skills have no local version source; a helper agent covers those (and whatever the tool reports as unknown).
 4. Starts several **helper agents in parallel**, each read-only, each with the smallest model that fits the work: a security review, a pattern scan, a usage count, a redundancy and usefulness assessment, and the version check for desktop plugins and claude.ai skills. Their partial reports go to `reports/`. Briefs are in [agent briefs](agent-briefs.md).
 5. **Measures the MCP cost** if you want the numbers (see below).
@@ -338,7 +338,7 @@ python3 -I tools/backup.py restore <folder-name>
 
 - **create** copies the files or folders into `~/.claude/backups/<reason>-<date>/` and writes a `manifest.json` there: the original path of each item, the stored copy, the type, a checksum and the size. The reason uses lowercase letters, digits and hyphens.
 - **list** and **show** tell you what exists and what a backup holds. Backups made before version 1.3.0 have no manifest; they are listed as "no manifest (restore by hand)". They are still valid copies, but you or Claude have to copy the files back yourself.
-- **restore** first prints what would be written or overwritten (and which originals differ from the backup), then asks "Restore these N items? [y/N]". **Only "y" or "yes" proceeds.** Claude does not answer that question for you; it comes to you. Before anything is overwritten the current files are saved in a safety backup with the reason `before-restore`, and afterwards the checksums of the restored files are verified. Before anything is written, the stored files are checked against the manifest checksums; a damaged backup is refused. Nothing is deleted; files that are not in the manifest stay as they are. A manifest that points outside your home folder (symlinks are resolved) is refused.
+- **restore** first prints what would be written or overwritten (and which originals differ from the backup), then asks "Restore these N items? [y/N]". **Only "y" or "yes" proceeds.** Claude does not answer that question for you; it comes to you. Before anything is overwritten the current files are saved in a safety backup with the reason `before-restore`, and afterwards the checksums of the restored files are verified. Before anything is written, the stored files are checked against the manifest checksums; a damaged backup is refused. Nothing is deleted; files that are not in the manifest stay as they are. Symlinks are stored as links. A manifest that points outside your home folder (symlinks are resolved) is restored only after an extra warning before the confirmation; system folders are always refused. A path that is itself a symlink (for example a linked skill folder) is stored as the link only, not the content it points to.
 
 This is the only place where a tool of this project writes outside the project folder ([section 7](#7-security-and-privacy)).
 
@@ -389,7 +389,7 @@ Allowed values for `kind`: `connector`, `mcp-server`, `plugin`, `skill`, `other`
 
 ### Updating to a new version
 
-Copies of version 1.3.0 or older do not contain `update.py` yet. For the first move to 1.4.0, download 1.4.0 and use the manual path (export in the old copy, import in the new one, then copy `reports/` and your `CLAUDE.md` decisions by hand). From 1.4.0 on, `update.py` does this for you.
+Copies of version 1.3.0 or older do not contain `update.py` yet. For the first move, download the latest release (1.4.0 or newer) and use the manual path (export in the old copy, import in the new one, then copy `reports/` and your `CLAUDE.md` decisions by hand). From 1.4.0 on, `update.py` does this for you.
 
 `tools/update.py` brings your copy to the newest release without losing your data. Run it only when you want to update; Claude runs it only on your request and never answers its confirmation question for you.
 
@@ -401,7 +401,7 @@ python3 -I tools/update.py apply
 - **`check`** reads the file `VERSION`, asks GitHub for the latest release of this project and prints the installed and the latest version and the release notes. If you are offline or GitHub does not answer, it says so calmly and changes nothing.
 - **`apply`** downloads the latest release and shows a preview: which managed files are replaced, added or removed, what is kept, and which extra files of yours it found. You confirm with "y". Then it makes a **full backup** of the project folder (with `backup.py`, reason `before-update-<old>-to-<new>`), replaces the managed files, carries over your page data (migrated to the current data format) and your `CLAUDE.md` sections, builds the page and runs the checks and the self-test. If anything fails, the backup is restored automatically. The name of the backup is written to `.update-state.json`.
 - **Offline:** download the release ZIP in a browser and run `python3 -I tools/update.py apply <release.zip>`. No network is used.
-- **`rollback`** restores the project folder from the backup of the last update, after a confirmation and a safety backup of the current state. Files created since the update are removed, so reports and data created since the update are reverted too.
+- **`rollback`** restores the project folder from the backup of the last update, after a confirmation and a safety backup of the current state. The preview lists the files created since the update that will be removed, so reports and data created since the update are reverted too.
 - **Git users:** an update refuses to run in a git checkout. Run `git pull`, then `python3 -I tools/update.py migrate`. It only migrates the data format of the page and adds the markers to `CLAUDE.md`; no files are replaced. It backs up those two files first.
 - **Private repository:** set the environment variable `GITHUB_TOKEN` to a token that can read the repository. It is sent only to api.github.com and never printed. Without it, a private repository answers "not found".
 
@@ -410,6 +410,8 @@ python3 -I tools/update.py apply
 **What is kept:** your reports in `reports/`; all data blocks of the overview page; the sections of `CLAUDE.md` between `<!-- USER:START name -->` and `<!-- USER:END name -->` (your decisions and the status); and every extra file outside the managed folders. Only text between the USER markers in `CLAUDE.md` is kept; put your own additions there. Text outside the markers is replaced.
 
 **Warning:** extra files you added *inside* the managed folders (`tools/`, `tests/`, `assets/`, `docs/`, `examples/`) are removed by an update. They appear in the preview under "removed" and are in the backup, so nothing is lost for good. Keep your own files elsewhere.
+
+**Security note:** `apply` installs and runs code from the downloaded release ZIP (it runs the new version's build, check and self-test). Only apply ZIPs from this project's GitHub releases; the ZIP is not signed.
 
 A downgrade is refused unless you add `--allow-downgrade`. A ZIP that is not a release of this project is refused.
 
@@ -425,7 +427,7 @@ Your audit data lives in the data blocks at the end of `audit-overview.html`. A 
    python3 -I tools/import_data.py --export my-audit.json
    ```
 
-   This creates the file `my-audit.json` with one key per data block. The file contains your own data. Keep it out of any public repository.
+   This creates the file `my-audit.json` with one key per data block. If the file already exists, the export refuses to overwrite it unless you add `--force`. The file contains your own data. Keep it out of any public repository.
 2. **Download and unzip the new version** (see [section 2](#2-installation-and-first-start)) and move or copy `my-audit.json` where you can reach it, for example next to the new folder.
 3. **In the new copy**, import it:
 
@@ -455,9 +457,9 @@ The import file is never modified. Exporting and importing again gives a byte-id
 ## 7. Security and privacy
 
 - **What the tools read.** Only local files: `~/.claude` (plugins, settings, your skills and agents, session transcripts, history) and the Claude desktop app's data folder (plugin lists, claude.ai skills). The usage counters read your transcripts and report names and numbers only, never the contents.
-- **What they write.** Inside this project folder only, with one exception. The inventory, counters, `diff_inventory.py` and `check_versions.py` only read; the build script, `tools/sample_data.py`, `tools/import_data.py`, `tools/history.py` and `tools/mcp_cost.py --write` write only the overview page; the optional output file of the inventory goes where you tell it. **The exception is `tools/backup.py`** (which `update.py` also calls for its full backup before an update; `update.py` itself writes only inside the project folder)**:** it writes backups to `~/.claude/backups/` and, when you restore a backup and confirm, to the original paths listed in that backup's manifest. It never deletes your files (it only removes its own unfinished backup folder after a failed create) and refuses manifests that point outside your home folder.
+- **What they write.** Inside this project folder only, with one exception. The inventory, counters, `diff_inventory.py` and `check_versions.py` only read; the build script, `tools/sample_data.py`, `tools/import_data.py`, `tools/history.py` and `tools/mcp_cost.py --write` write only the overview page; the optional output file of the inventory and the JSON file of `import_data.py --export` go where you tell them. **The exception is `tools/backup.py`** (which `update.py` also calls for its full backup before an update; `update.py` itself writes only inside the project folder)**:** it writes backups to `~/.claude/backups/` and, when you restore a backup and confirm, to the original paths listed in that backup's manifest. It never deletes your files (it only removes its own unfinished backup folder after a failed create) and treats a manifest that points outside your home folder with an extra warning before the confirmation (system folders are refused).
 - **Your own `/context` output.** `mcp_cost.py` reads the text you give it. It never starts Claude and never reads `~/.claude`. Only to turn connector IDs into names does it read, without changing anything, the connector lists in the session files of the desktop app (`claude-code-sessions`); it takes nothing but ID and name from them. `--no-resolve` skips this.
-- **Network.** Only `tools/update.py` uses the network, and only when you run `check` or `apply` without a ZIP file: read-only GET requests to api.github.com for the latest release of this project and the download of that release. Nothing is uploaded. A `GITHUB_TOKEN` (private repositories) goes only to api.github.com. All other tools use no network. The overview page has no external resources; its stylesheet and fonts are embedded.
+- **Network.** Only `tools/update.py` uses the network, and only when you run `check` or `apply` without a ZIP file: read-only GET requests to api.github.com for the latest release of this project and the download of that release. Nothing is uploaded. A `GITHUB_TOKEN` (private repositories) goes only to api.github.com. All other scripts use no network. Claude itself, when it runs the audit, may search the web for version notes and information about candidates; nothing from your setup is sent except search terms such as plugin names. The overview page has no external resources; its stylesheet and fonts are embedded.
 - **Backups.** Before every change Claude saves what it is about to change to `~/.claude/backups/<reason>-<date>/` on your computer. A restore overwrites files only after your explicit confirmation.
 - **Nothing is sent to third parties by this project.** The reports and the overview stay on your computer; what you share is up to you. Note that the audit runs in your own Claude session as usual, so what Claude reads in a session is processed like any other session content.
 - **Your data in files.** Reports, the export file and `CLAUDE.md` decisions may contain names of your customizations and notes about your work. Do not publish them without looking.
@@ -493,7 +495,7 @@ The folder location comes from the official documentation but is untested. The t
 `python3 -I tools/import_data.py <file.json>` refuses while the page holds data, sample or your own, so nothing is overwritten by accident. Save the current data first with `python3 -I tools/import_data.py --export backup.json`, then add `--replace` if you really want to overwrite.
 
 **9. The import reports a schema error.**
-The file is checked first in a temporary copy, so your page is untouched. The message names the problem (for example an unknown key, a missing required key, or a value that is not allowed). The expected shape is that of `examples/sample-data.json`: one key per block (`meta`, `plugins`, `claudeai-skills`, `mcp`, `builtin`, `candidates`, `overlaps`, `open-items`, `tokens`); a missing block counts as empty.
+The file is checked first in a temporary copy, so your page is untouched. The message names the problem (for example an unknown key, a missing required key, or a value that is not allowed). The expected shape is that of `examples/sample-data.json`: one key per block (`meta`, `plugins`, `claudeai-skills`, `mcp`, `builtin`, `candidates`, `overlaps`, `open-items`, `tokens`, `history`); a missing block counts as empty.
 
 **10. `check_overview.py` fails with `--inventory` on a fresh page.**
 Expected. With `--inventory reports/inventory.tsv` the check compares the page with your real inventory, and an installed customization missing from the page is a failure. It passes once every installed item is recorded on the page. Also make sure the inventory file was written by `python3 -I tools/inventory.py reports/inventory.tsv`; any other file is rejected.
@@ -508,7 +510,7 @@ Run `python3 -I tools/build_overview.py`. It re-embeds `assets/style.css` and th
 Run `python3 -I tools/build_overview.py`, then `python3 -I tools/check_overview.py`. The build stops with "ERROR: ..." and leaves the file unchanged if the data are invalid. Tell Claude rather than editing by hand where you can.
 
 **14. A removed desktop plugin is still listed.**
-Ask Claude to check with `python3 -I tools/check_desktop_plugin.py "<name>"`. It answers "Yes, it was removed." or "No, it was not removed." Called without a name, it lists all desktop plugins. The app may need a moment or a restart to update its list.
+Ask Claude to check with `python3 -I tools/check_desktop_plugin.py "<name>"`. It checks desktop plugins and claude.ai skills and answers "Yes, it was removed." or "No, it was not removed."; if the app data cannot be read it answers "Unknown" instead. Called without a name, it lists all desktop plugins. The app may need a moment or a restart to update its list.
 
 **15. The audit says a hook was found in a plugin that has none.**
 `tools/inventory.py` counts hooks by text search, so hits in reference texts are false alarms. Claude checks such hits itself before reporting them.

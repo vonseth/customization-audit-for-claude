@@ -13,10 +13,14 @@ CURRENT = 1
 
 
 def version_of(blocks):
-    """Schema version of a dict of data blocks (0 when data-meta has none)."""
+    """Schema version of a dict of data blocks (0 when data-meta has none).
+
+    A value that is present but not a valid version (negative, bool, not an integer) is returned unchanged;
+    migrate() then refuses it with a clear message.
+    """
     meta = blocks.get("meta") if isinstance(blocks, dict) else None
     v = meta.get("schema_version") if isinstance(meta, dict) else None
-    return v if isinstance(v, int) and not isinstance(v, bool) else 0
+    return 0 if v is None else v
 
 
 def _from_0(data):
@@ -28,9 +32,12 @@ MIGRATIONS = {0: _from_0}
 
 def migrate(data, from_version):
     """Return the data blocks migrated from from_version to CURRENT (the input dict is not modified)."""
+    if not isinstance(from_version, int) or isinstance(from_version, bool) or from_version < 0:
+        raise ValueError("data-meta has an invalid schema_version (%r); it must be a whole number of 0 or "
+                         "more" % (from_version,))
     if from_version > CURRENT:
-        raise ValueError("the data has schema version %d, but these tools only know up to %d; "
-                         "update the tools first" % (from_version, CURRENT))
+        raise ValueError("the data has schema version %d, so it comes from a newer version of "
+                         "this project than these tools (they know up to %d); update the tools first" % (from_version, CURRENT))
     out = dict(data)
     for v in range(from_version, CURRENT):
         out = MIGRATIONS[v](out)

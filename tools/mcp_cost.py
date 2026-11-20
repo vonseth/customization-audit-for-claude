@@ -42,7 +42,8 @@ Output (stdout):
                 before " (" is tried, but only for entries that are not removed, only if no entry matches the server
                 exactly, and only if it points to one entry (a connected one wins over the rest); otherwise the
                 entries are listed and left unchanged. Then builds the page; if the build fails the page is restored. Needs a measured data-tokens
-                block (data-tokens is null on an empty page: set "now" first). Unmatched servers are listed;
+                block (data-tokens is null on an empty page: replace null in the data-tokens block of the page by
+                {"now": <approx. tokens from tools/inventory.py>, "measured_on": "YYYY-MM-DD"} first; the error message says how). Unmatched servers are listed;
                 entries that were not measured keep their old value.
 Standard library only.
 """
@@ -261,6 +262,10 @@ def report(res):
     return "\n".join(out)
 
 
+def err(msg):
+    print(msg, file=sys.stderr)
+
+
 def norm(name):
     return re.sub(r"[\W_]+", "", name).lower()
 
@@ -284,20 +289,23 @@ def write_page(path, res, date):
     for n in ("tokens", "mcp"):
         m = block_pattern(n).search(html)
         if not m:
-            print("ERROR: JSON block #data-%s not found in the page. Nothing was changed." % n)
+            err("ERROR: JSON block #data-%s not found in the page. Nothing was changed." % n)
             return 1
         try:
             blocks[n] = json.loads(m.group(2))
         except ValueError as e:
-            print("ERROR: JSON block #data-%s is not valid JSON: %s. Nothing was changed." % (n, e))
+            err("ERROR: JSON block #data-%s is not valid JSON: %s. Nothing was changed." % (n, e))
             return 1
     if not isinstance(blocks["tokens"], dict) or not isinstance(blocks["mcp"], list):
-        print("ERROR: data-tokens is empty (null). Measure the permanent tokens first (tools/inventory.py, then set "
-              "data-tokens \"now\"); nothing was changed.")
+        err("ERROR: data-tokens is empty (null): the page has no measured token total yet. Nothing was changed. "
+            "Set it first: run 'python3 -I tools/inventory.py' and add up the approx. tokens per source; then in "
+            "audit-overview.html replace null in <script type=\"application/json\" id=\"data-tokens\"> with "
+            "{\"now\": <that total>, \"measured_on\": \"YYYY-MM-DD\"} (or import a JSON file with a \"tokens\" block "
+            "using tools/import_data.py); then run this command again.")
         return 1
     perm = permanent(res)
     if perm is None:
-        print("ERROR: no summary lines ('MCP tools', 'MCP server instructions') in the input, so data-tokens \"mcp\" "
+        err("ERROR: no summary lines ('MCP tools', 'MCP server instructions') in the input, so data-tokens \"mcp\" "
               "cannot be set. Nothing was changed.")
         return 1
     blocks["tokens"]["mcp"] = {"permanent": perm, "deferred": res["deferred"] or 0, "measured_on": date}
@@ -338,7 +346,7 @@ def write_page(path, res, date):
     if r.returncode != 0:
         with open(path, "w", encoding="utf-8", newline="") as f:
             f.write(html)
-        print("ERROR: the build failed; the page was restored.\n" + r.stdout.strip() + r.stderr.strip())
+        err("ERROR: the build failed; the page was restored.\n" + r.stdout.strip() + r.stderr.strip())
         return 1
     print("\nPage updated: data-tokens mcp = permanent %s, deferred %s, measured %s; context_tokens set on %d of %d MCP entries."
           % (format(perm, ",d"), format(res["deferred"] or 0, ",d"), date, set_n, len(blocks["mcp"])))
@@ -358,6 +366,9 @@ def main(argv=None):
     ap.add_argument("--write", nargs="?", const=DEFAULT_PAGE, default=None, metavar="page")
     ap.add_argument("--date", default=None)
     ap.add_argument("--no-resolve", action="store_true", help="do not map connector IDs to names")
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
     args = ap.parse_args(argv)
     date = args.date or datetime.date.today().isoformat()
     try:
@@ -365,16 +376,16 @@ def main(argv=None):
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
             raise ValueError
     except ValueError:
-        print("ERROR: --date must be a valid date like 2026-11-20.")
+        err("ERROR: --date must be a valid date like 2026-11-20.")
         return 1
     try:
         text = sys.stdin.read() if args.input == "-" else read(args.input)
     except (OSError, UnicodeDecodeError) as e:
-        print("ERROR: cannot read %s: %s" % (args.input, e))
+        err("ERROR: cannot read %s: %s" % (args.input, e))
         return 1
     res = parse(text)
     if permanent(res) is None and res["deferred"] is None and not res["tools"]:
-        print("No MCP lines found. Run /context in Claude Code yourself and paste its output; the text must hold lines "
+        err("No MCP lines found. Run /context in Claude Code yourself and paste its output; the text must hold lines "
               "like 'MCP tools 18.442 ...' or 'mcp__server__tool: 1,345 tokens'.")
         return 1
     if not args.no_resolve:
@@ -385,7 +396,7 @@ def main(argv=None):
     if args.write is not None:
         page = os.path.abspath(args.write)
         if not os.path.isfile(page):
-            print("ERROR: %s not found." % page)
+            err("ERROR: %s not found." % page)
             return 1
         return write_page(page, res, date)
     return 0

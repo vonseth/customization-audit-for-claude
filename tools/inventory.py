@@ -95,6 +95,13 @@ def scan(root):
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(errors="backslashreplace")
+    if len(sys.argv) > 1 and sys.argv[1].startswith("-"):
+        print(__doc__)
+        sys.exit(0)
     claude = paths.claude_dir()
     rows = []
 
@@ -154,9 +161,6 @@ def main():
     head = ["source", "organization", "name", "status", "skills", "agents", "commands",
             "description_chars", "hooks", "mcp", "path"]
     out = "\n".join("\t".join(map(str, r)) for r in [head] + rows)
-    if len(sys.argv) > 1 and sys.argv[1].startswith("-"):
-        print(__doc__)
-        sys.exit(0)
     if len(sys.argv) > 1:
         try:
             with open(sys.argv[1], "w", encoding="utf-8") as fh:

@@ -121,7 +121,7 @@ class CheckVersions(unittest.TestCase):
         # exists but broken: still an error
         write(self.plugins / "installed_plugins.json", "not json")
         with contextlib.redirect_stderr(io.StringIO()):
-            self.assertEqual(check_versions.main(["--json"]), 2)
+            self.assertEqual(check_versions.main(["--json"]), 1)
 
     def test_version_compare(self):
         def newer(a, b):
@@ -140,6 +140,77 @@ class CheckVersions(unittest.TestCase):
         entries = [{"name": "a", "source": "./a"}]
         self.build(entries, {"a@mk": [{"version": "2.0.0-beta.1"}]}, {"versioned": {"a": "2.0.0"}})
         self.assertEqual(self.result(check_versions.run(), "a")["status"], check_versions.NEWER)
+
+    def test_prerelease_precedence(self):
+        def newer(a, b):
+            return check_versions.older(check_versions.vkey(a), check_versions.vkey(b))
+        self.assertTrue(newer("1.5.0-beta.1", "1.5.0-beta.2"))
+        self.assertFalse(newer("1.5.0-beta.2", "1.5.0-beta.1"))
+        self.assertFalse(newer("1.5.0-beta.1", "1.5.0-beta.1"))
+        self.assertTrue(newer("1.5.0-beta.2", "1.5.0-beta.10"))      # numeric identifiers as numbers
+        self.assertTrue(newer("1.5.0-alpha", "1.5.0-beta"))          # text identifiers lexically
+        self.assertTrue(newer("1.5.0-alpha", "1.5.0-alpha.1"))       # shorter list is older
+        self.assertTrue(newer("1.5.0-1", "1.5.0-alpha"))             # numbers before text
+        self.assertTrue(newer("1.5.0-beta.9", "1.5.0"))
+        self.assertFalse(newer("1.5.0", "1.5.0-beta.9"))
+        entries = [{"name": "a", "source": "./a"}]
+        self.build(entries, {"a@mk": [{"version": "1.5.0-beta.1"}]}, {"versioned": {"a": "1.5.0-beta.2"}})
+        self.assertEqual(self.result(check_versions.run(), "a")["status"], check_versions.NEWER)
+
+    def test_empty_install_location_is_unknown(self):
+        entries = [{"name": "a", "source": "./a"}]
+        self.build(entries, {"a@mk": [{"version": "1.0.0"}]}, {"versioned": {"a": "2.0.0"}})
+        for loc in ("", None, "  "):
+            km = {"mk": {"source": {"source": "github", "repo": "me/mk"}, "installLocation": loc}}
+            if loc is None:
+                del km["mk"]["installLocation"]
+            write(self.plugins / "known_marketplaces.json", json.dumps(km))
+            os.chdir(self.tmp)  # a wrongly used "" would point at the current folder
+            write(Path(self.tmp) / ".claude-plugin" / "marketplace.json",
+                  json.dumps({"name": "x", "plugins": entries}))
+            write(Path(self.tmp) / "a" / ".claude-plugin" / "plugin.json", json.dumps({"version": "2.0.0"}))
+            r = self.result(check_versions.run(), "a")
+            os.chdir(str(ROOT))
+            self.assertEqual(r["status"], check_versions.UNKNOWN)
+            self.assertIn("unknown", r["reason"])
+
+    @unittest.skipUnless(HAVE_GIT, "git not available")
+    def test_sha_validation(self):
+        entries = [{"name": "p", "source": "./p"}]
+        write(self.mkt / "p" / "f.txt", "one")
+        write(self.mkt / ".claude-plugin" / "marketplace.json", json.dumps({"name": "mk", "plugins": entries}))
+        subprocess.run(["git", "init", "-q", str(self.mkt)], check=True)
+        git(self.mkt, "add", "-A")
+        git(self.mkt, "commit", "-qm", "one")
+        calls = []
+        real = check_versions.git_run
+        check_versions.git_run = lambda repo, *a: (calls.append(a), real(repo, *a))[1]
+        try:
+            for bad in ("--output=" + str(Path(self.tmp) / "pwned"), "-x", "abc", "zz" * 20, "1" * 41):
+                self.build(entries, {"p@mk": [{"version": "x", "gitCommitSha": bad}]}, {})
+                r = self.result(check_versions.run(), "p")
+                self.assertEqual(r["status"], check_versions.UNKNOWN)
+                self.assertEqual(r["installed_commit"], None)
+        finally:
+            check_versions.git_run = real
+        self.assertFalse(any(str(x).startswith("-") and x.startswith("--output") for c in calls for x in c))
+        self.assertFalse((Path(self.tmp) / "pwned").exists())
+        # a valid abbreviated sha is still used
+        first = head(self.mkt)
+        self.build(entries, {"p@mk": [{"version": "x", "gitCommitSha": first[:7]}]}, {})
+        self.assertEqual(self.result(check_versions.run(), "p")["status"], check_versions.UP)
+
+    def test_help_and_usage_errors(self):
+        env = dict(os.environ, CUSTOMIZATION_AUDIT_HOME=self.tmp)
+        cmd = [sys.executable, "-I", "-B", str(ROOT / "tools" / "check_versions.py")]
+        for flag in ("--help", "-h"):
+            p = subprocess.run(cmd + [flag], capture_output=True, text=True, env=env)
+            self.assertEqual((p.returncode, p.stderr), (0, ""))
+            self.assertIn("Usage:", p.stdout)
+        p = subprocess.run(cmd + ["--bogus"], capture_output=True, text=True, env=env)
+        self.assertEqual(p.returncode, 2)
+        self.assertEqual(p.stdout, "")
+        self.assertIn("Usage:", p.stderr)
 
 
 if __name__ == "__main__":

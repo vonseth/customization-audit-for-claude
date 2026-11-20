@@ -69,6 +69,13 @@ def run(tool, home, *args):
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(errors="backslashreplace")
+    if any(a in ("-h", "--help") for a in sys.argv[1:]):
+        print(__doc__)
+        sys.exit(0)
     with tempfile.TemporaryDirectory() as tmp:
         home = Path(tmp) / "home"
         build_home(home)

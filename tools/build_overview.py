@@ -898,7 +898,7 @@ def sample_markup(data):
     cmd = "<code>python3 -I tools/sample_data.py remove</code>"
     return '<div class="sample-banner" role="note">%s</div>' % bi_raw(
         "<b>Sample data:</b> this is not your installation. Remove it with: " + cmd,
-        "<b>Beispieldaten:</b> das ist nicht deine Installation. Entfernen mit: " + cmd)
+        "<b>Beispieldaten:</b> Das ist nicht deine Installation. Entfernen mit: " + cmd)
 
 
 def asof_markup(data):
@@ -1065,7 +1065,7 @@ def overlaps_markup(data, now_total):
         else:
             z.append("</summary>")
         heads = [("Customization", "Anpassung"), ("Tokens", "Tokens"), ("Role", "Rolle"),
-                 ("Uniqueness", "Alleinstellung"), ("Reason", "Begründung")]
+                 ("Uniqueness", "Einzigartigkeit"), ("Reason", "Begründung")]
         z.append('<table class="ov-table"><thead><tr>%s</tr></thead><tbody>'
                  % "".join("<th>%s</th>" % bi(a, b) for a, b in heads))
         for m in ms:
@@ -1158,6 +1158,13 @@ def render(html, page_path):
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(errors="backslashreplace")
+    if any(a in ("-h", "--help") for a in sys.argv[1:]):
+        print(__doc__)
+        return 0
     here = os.path.dirname(os.path.abspath(__file__))
     path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "..", "audit-overview.html")
     try:
@@ -1165,7 +1172,7 @@ def main():
             html = f.read()
         new, data = render(html, path)
     except (Fail, OSError) as e:
-        print("ERROR: %s\nFile unchanged." % e)
+        print("ERROR: %s\nFile unchanged." % e, file=sys.stderr)
         return 1
     print("  plugins %d, claude.ai skills %d, MCP %d, built-in %d, candidates %d, overlap topics %d, open items %d"
           % (len(data["plugins"]), len(data["claudeai-skills"]), len(data["mcp"]), len(data["builtin"]),

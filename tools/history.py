@@ -78,21 +78,21 @@ def snapshot(path, date, note, replace):
     html = read(path)
     hist = raw_history(html)
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
-        print("ERROR: --date must look like YYYY-MM-DD.")
+        print("ERROR: --date must look like YYYY-MM-DD.", file=sys.stderr)
         return 1
     try:
         datetime.date.fromisoformat(date)
     except ValueError:
-        print("ERROR: %s is not a valid date." % date)
+        print("ERROR: %s is not a valid date." % date, file=sys.stderr)
         return 1
     dates = [h.get("date") for h in hist if isinstance(h, dict)]
     if date in dates and not replace:
         print("ERROR: a snapshot for %s already exists. Use --replace to overwrite it, or --date for another day. "
-              "Nothing was changed." % date)
+              "Nothing was changed." % date, file=sys.stderr)
         return 1
     rest = [h for h in hist if not (isinstance(h, dict) and h.get("date") == date)]
     if rest and date < max(h.get("date", "") for h in rest):
-        print("ERROR: %s is before the latest snapshot (%s). Nothing was changed." % (date, max(h.get("date", "") for h in rest)))
+        print("ERROR: %s is before the latest snapshot (%s). Nothing was changed." % (date, max(h.get("date", "") for h in rest)), file=sys.stderr)
         return 1
     snap = {"date": date}
     snap.update(current_numbers(html))
@@ -104,7 +104,7 @@ def snapshot(path, date, note, replace):
     res = subprocess.run([sys.executable, "-I", BUILDER, path], capture_output=True, text=True)
     if res.returncode != 0:
         write(path, html)
-        print("ERROR: the build failed; the page was restored.\n" + res.stdout.strip() + res.stderr.strip())
+        print("ERROR: the build failed; the page was restored.\n" + res.stdout.strip() + res.stderr.strip(), file=sys.stderr)
         return 1
     print("Snapshot %s: %d tokens, %d installed, %d removed, %d candidates (%d snapshot%s in total)"
           % (date, snap["tokens"], snap["installed"], snap["removed"], snap["candidates"], len(new_hist),
@@ -128,12 +128,16 @@ def listing(path):
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(errors="backslashreplace")
     args = sys.argv[1:]
     if any(a in ("-h", "--help") for a in args):
         print(__doc__)
         return 0
     if not args or args[0] not in ("snapshot", "list"):
-        print(__doc__)
+        print(__doc__, file=sys.stderr)
         return 2
     cmd, rest = args[0], args[1:]
     date, note, replace, pos = datetime.date.today().isoformat(), "", False, []
@@ -144,7 +148,7 @@ def main():
             replace = True
         elif a in ("--date", "--note") and cmd == "snapshot":
             if i + 1 >= len(rest):
-                print("ERROR: %s needs a value." % a)
+                print("ERROR: %s needs a value." % a, file=sys.stderr)
                 return 2
             if a == "--date":
                 date = rest[i + 1]
@@ -152,17 +156,17 @@ def main():
                 note = rest[i + 1]
             i += 1
         elif a.startswith("--") or (a == "--replace" and cmd == "list"):
-            print(__doc__)
+            print(__doc__, file=sys.stderr)
             return 2
         else:
             pos.append(a)
         i += 1
     if len(pos) > 1 or (cmd == "list" and replace):
-        print(__doc__)
+        print(__doc__, file=sys.stderr)
         return 2
     path = os.path.abspath(pos[0] if pos else os.path.join(HERE, "..", "audit-overview.html"))
     if not os.path.isfile(path):
-        print("ERROR: %s not found." % path)
+        print("ERROR: %s not found." % path, file=sys.stderr)
         return 1
     return snapshot(path, date, note, replace) if cmd == "snapshot" else listing(path)
 

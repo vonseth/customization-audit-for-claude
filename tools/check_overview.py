@@ -630,6 +630,10 @@ def check_inventory(inv_path, data):
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(errors="backslashreplace")
     args = sys.argv[1:]
     if any(a in ("-h", "--help") for a in args):
         print(__doc__)
@@ -642,7 +646,7 @@ def main():
         inv = args[i + 1] if i + 1 < len(args) else None
         args = args[:i] + args[i + 2:]
         if inv is None:
-            print("ERROR: --inventory needs a file")
+            print("ERROR: --inventory needs a file", file=sys.stderr)
             return 1
     path = os.path.abspath(args[0] if args else DEFAULT)
     base = os.path.dirname(path)
@@ -652,7 +656,7 @@ def main():
         raw = open(path, "rb").read()
         data = bo.load_all(text)
     except (OSError, bo.Fail) as e:
-        print("ERROR: %s" % e)
+        print("ERROR: %s" % e, file=sys.stderr)
         return 1
     tree = parse(text)
     g = expected_groups(data)

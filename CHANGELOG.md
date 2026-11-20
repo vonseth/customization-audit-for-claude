@@ -2,6 +2,37 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 1.4.2 – 2026-11-20
+
+Fixes from a full review of 1.4.1.
+
+### Fixed
+
+- `update.py apply`: an update whose new version adds a data block no longer fails with `KeyError` (the old page gets the empty block).
+- `update.py`: a `CLAUDE.md` with Windows line endings (CRLF) keeps your sections between the USER markers.
+- `update.py`: restore and rollback check the backup manifest (absolute paths, no "..", only this project folder) before writing; symlinks in the project folder are restored as links; a failed automatic restore names a by-hand command that works.
+- `update.py migrate`: a current page is left byte-identical and reported as "Already current, nothing to migrate".
+- `schema.py`: a negative, non-integer or newer `schema_version` gives a clear message instead of a traceback.
+- `check_desktop_plugin.py` now also checks claude.ai skills (`skills-plugin` folder); before, it always answered "removed" for them. If a plugin list or plugin file cannot be read it answers "Unknown" (exit 1) instead of "removed"; without any desktop-app data it prints a note and no answer (exit 0, as before).
+- `backup.py`: a dangling symlink no longer crashes `create`; symlinks are stored and restored as links and never followed. Backups of folders outside the home folder can now be restored, after an extra warning; system folders are refused.
+- `count_usage.py`: slash commands are counted once (not again from the history file); command tags inside pasted text or tool results are not counted.
+- `count_usage.py`, `count_mcp_usage.py`: timestamps with unusual fractional seconds no longer fail on Python 3.9.
+- `import_data.py`: a missing `assets/` folder or broken input gives a clear error instead of a traceback; `--export` no longer overwrites an existing file without `--force` and never overwrites the page.
+- `mcp_cost.py --write` on a page without token data says how to add it.
+- `check_versions.py`, `update.py`: pre-release versions (for example `1.5.0-beta.1` and `-beta.2`) are ordered by semantic versioning; an empty marketplace location or a malformed commit ID counts as "unknown".
+- Every tool: `-h`/`--help` prints the usage and exits 0 without doing anything else; errors go to stderr (usage errors exit 2; `check_versions.py` now exits 1, not 2, when `installed_plugins.json` cannot be read); output cannot crash on consoles with a limited character set.
+
+### Changed
+
+- `update.py rollback` lists the files created since the update that it will remove, before asking.
+- German page texts: "Das" after the sample-data colon, "Einzigartigkeit" as column head, "Überschneidungen" instead of "Doppelungen", consistent du-form in the usage entries, request names `docs/review-guide.md`, "Momentaufnahme speichern", "Kein offizielles Produkt von Anthropic", one note that the documentation is in English.
+- README and manual: accurate scope of `inventory.py`, `history` in the list of data blocks, one name for the version report (`L_versions.md`), glossary note, `tests/` and `.github/` in the folder overview, how to run the tests, what `--export` writes, "latest release" for the first move to 1.4.0, `profile.md` explained in agent brief D, a note that Claude may search the web during an audit, "14 checks, plus one with `--inventory`", a note that release ZIPs are not signed.
+- The connector ID in `test_mcp_cost.py` is now a made-up one.
+
+### Added
+
+- Tests: `test_cli.py` (help of every tool), `test_check_desktop_plugin.py`, `test_count_usage.py`, `test_import_data.py`, and new cases in the existing tests.
+
 ## 1.4.1 – 2026-11-20
 
 ### Fixed

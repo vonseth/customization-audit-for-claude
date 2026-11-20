@@ -80,16 +80,49 @@ assert any(n.startswith("before-restore-") for n in new), new
 safety = next(n for n in new if n.startswith("before-restore-"))
 assert json.loads((BK / safety / "manifest.json").read_text())["entries"][0]["sha256"] != orig_sha
 
-# manifest with outside-home path refused
-bad = BK / "evil-2026-01-01"
-(bad / "1").mkdir(parents=True)
-(bad / "1" / "x").write_text("pwn")
-outside = Path(TMP.name).resolve() / "outside.txt"
-(bad / "manifest.json").write_text(json.dumps({"created": "2026-01-01T00:00:00", "reason": "evil",
-    "tool_version": "x", "entries": [{"original": str(outside), "stored": "1/x",
-                                      "type": "file", "sha256": "0", "size": 4}]}))
-rc, _, err = run("restore", "evil-2026-01-01", "--yes")
-assert rc == 1 and "outside your home" in err and not outside.exists()
+def fake_backup(name, entries, files=None):
+    """A hand-made backup folder with the given manifest entries and stored files {relative: text}."""
+    b = BK / name
+    for rel, text in (files or {}).items():
+        (b / rel).parent.mkdir(parents=True, exist_ok=True)
+        (b / rel).write_text(text)
+    (b / "manifest.json").parent.mkdir(parents=True, exist_ok=True)
+    (b / "manifest.json").write_text(json.dumps({"created": "2026-01-01T00:00:00", "reason": "evil",
+                                                 "tool_version": "x", "entries": entries}))
+    return name
+
+
+# 3. outside the home folder: restorable only after an extra warning and the normal confirmation
+outside = Path(TMP.name).resolve() / "proj" / "outside.txt"
+outside.parent.mkdir()
+(BK / "outside-2026-01-01" / "1").mkdir(parents=True)
+(BK / "outside-2026-01-01" / "1" / "x").write_text("data")
+fake_backup("outside-2026-01-01", [{"original": str(outside), "stored": "1/x", "type": "file",
+                                    "sha256": hashlib.sha256(b"data").hexdigest(), "size": 4}])
+rc, out, _ = run("restore", "outside-2026-01-01", stdin="n\n")
+assert rc == 1 and "outside your home folder" in out and "WARNING" in out and not outside.exists(), out
+rc, out, _ = run("restore", "outside-2026-01-01", stdin="y\n")
+assert rc == 0 and outside.read_text() == "data" and "outside your home folder" in out, out
+assert "outside your home folder" not in run("restore", folder.name, "--yes")[1]  # normal restore: no warning
+# a path inside the home folder reached through a symlink to outside is outside too
+out_dir = Path(TMP.name).resolve() / "elsewhere"
+out_dir.mkdir()
+(HOME / "sneaky").symlink_to(out_dir)
+(BK / "sneaky-2026-01-01" / "1").mkdir(parents=True)
+(BK / "sneaky-2026-01-01" / "1" / "x").write_text("pwn")
+fake_backup("sneaky-2026-01-01", [{"original": str(HOME / "sneaky" / "x"), "stored": "1/x", "type": "file",
+                                   "sha256": sha(BK / "sneaky-2026-01-01" / "1" / "x"), "size": 3}])
+rc, out, _ = run("restore", "sneaky-2026-01-01", stdin="n\n")
+assert rc == 1 and "outside your home folder" in out and not (out_dir / "x").exists()
+# still refused: relative paths, "..", system locations
+for n, o in (("rel", "relative/x.txt"), ("dots", str(HOME / ".." / "x.txt")), ("root", "/"),
+             ("etc", "/etc/hosts"), ("usr", "/usr/local/x"), ("sys", "/System/x")) + (
+             (("lib", "/Library/x"),) if sys.platform == "darwin" else ()):
+    (BK / ("bad-%s-2026-01-01" % n) / "1").mkdir(parents=True)
+    (BK / ("bad-%s-2026-01-01" % n) / "1" / "x").write_text("pwn")
+    fake_backup("bad-%s-2026-01-01" % n, [{"original": o, "stored": "1/x", "type": "file", "sha256": "0", "size": 3}])
+    rc, _, err = run("restore", "bad-%s-2026-01-01" % n, "--yes")
+    assert rc == 1 and "manifest refused" in err, (n, rc, err)
 
 # 1. recursion: backups folder, its parent and a folder inside it are refused, nothing created
 before = sorted(os.listdir(BK))
@@ -116,19 +149,6 @@ if os.geteuid() != 0:
     assert rc != 0 and sorted(os.listdir(BK)) == before, (rc, err)
     assert (broken / "ok.txt").exists()  # originals untouched
 
-# 2. manifest original that is a symlink pointing outside home is refused
-out_dir = Path(TMP.name).resolve() / "elsewhere"
-out_dir.mkdir()
-(HOME / "sneaky").symlink_to(out_dir)
-sn = BK / "sneaky-2026-01-01"
-(sn / "1").mkdir(parents=True)
-(sn / "1" / "x").write_text("pwn")
-(sn / "manifest.json").write_text(json.dumps({"created": "2026-01-01T00:00:00", "reason": "sneaky",
-    "tool_version": "x", "entries": [{"original": str(HOME / "sneaky" / "x"), "stored": "1/x",
-                                      "type": "file", "sha256": sha(sn / "1" / "x"), "size": 3}]}))
-rc, _, err = run("restore", "sneaky-2026-01-01", "--yes")
-assert rc == 1 and "outside your home" in err and not (out_dir / "x").exists()
-
 # 3. damaged backup: tampered stored file (single and in folder) refused before writing anything
 rc, out, _ = run("create", "damage", str(f), str(d))
 dmg = Path(out.strip())
@@ -142,5 +162,59 @@ assert rc == 1 and "backup is damaged" in err and f.read_text() == '{"a": 3}'
 rc, out, err = run("restore", dmg.name, "--yes")
 assert rc == 1 and "backup is damaged" in err
 assert (d / "sub" / "x.txt").read_text() == "current" and f.read_text() == '{"a": 3}'
+
+# 4. symlinks are stored and restored as links, never followed
+lk = HOME / "linky"
+(lk / "real").mkdir(parents=True)
+(lk / "real" / "a.txt").write_text("A")
+(lk / "valid").symlink_to("real/a.txt")
+(lk / "dangling").symlink_to("does-not-exist")
+(lk / "dirlink").symlink_to("real")
+top_dangling = HOME / "topdangling"
+top_dangling.symlink_to("nowhere")
+rc, out, err = run("create", "links", str(lk), str(top_dangling))  # a dangling link used to crash create
+assert rc == 0, err
+lf = Path(out.strip())
+m = json.loads((lf / "manifest.json").read_text())
+e0, e1 = m["entries"]
+assert e0["links"] == {"valid": "real/a.txt", "dangling": "does-not-exist", "dirlink": "real"}, e0
+assert list(e0["files"]) == ["real/a.txt"], e0  # links are not counted as files
+assert e1["type"] == "symlink" and e1["target"] == "nowhere" and "sha256" not in e1, e1
+assert (lf / "1" / "linky" / "valid").is_symlink() and (lf / "1" / "linky" / "dirlink").is_symlink()
+assert "-> nowhere" in run("show", lf.name)[1]
+# damage the folder, then restore: links come back as links
+for n in ("valid", "dangling", "dirlink"):
+    (lk / n).unlink()
+(lk / "valid").write_text("a plain file now")
+(lk / "dirlink").mkdir()
+top_dangling.unlink()
+(lk / "real" / "a.txt").write_text("A2")
+rc, out, err = run("restore", lf.name, "--yes")
+# (the folder in place of the link "dirlink" must be refused, not replaced)
+assert rc == 1 and "cannot replace a folder" in err, (rc, out, err)
+(lk / "dirlink").rmdir()
+rc, out, err = run("restore", lf.name, "--yes")
+assert rc == 0, (out, err)
+assert os.readlink(lk / "valid") == "real/a.txt" and os.readlink(lk / "dangling") == "does-not-exist"
+assert os.readlink(lk / "dirlink") == "real" and os.readlink(top_dangling) == "nowhere"
+assert (lk / "real" / "a.txt").read_text() == "A"  # the real file is restored, not written through a link
+# restore never writes through a symlink in the way: a link where the backup has a folder is refused
+shutil_target = Path(TMP.name).resolve() / "linktarget"
+shutil_target.mkdir()
+(lk / "real").rename(lk / "real-moved")
+(lk / "real").symlink_to(shutil_target)
+bk_before = sorted(os.listdir(BK))
+rc, out, err = run("restore", lf.name, "--yes")
+assert rc == 1 and "symlink" in err and not any(shutil_target.iterdir()), (rc, out, err)
+assert sorted(os.listdir(BK)) == bk_before, "refused before the safety backup, nothing half-done"
+
+# 5. -h / --help anywhere: usage on stdout, exit 0, nothing else
+before = sorted(os.listdir(BK))
+for a in (["-h"], ["--help"], ["create", "--help"], ["restore", "x", "-h"]):
+    rc, out, err = run(*a)
+    assert rc == 0 and "Usage:" in out and err == "", (a, rc, err)
+assert sorted(os.listdir(BK)) == before
+rc, out, err = run("bogus")
+assert rc == 2 and out == "" and "Usage:" in err
 
 print("all backup tests passed")

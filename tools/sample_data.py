@@ -91,9 +91,16 @@ def build(path):
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(errors="backslashreplace")
     args = sys.argv[1:]
-    if not args or args[0] not in ("load", "remove", "status") or len(args) > 2:
+    if any(a in ("-h", "--help") for a in args):
         print(__doc__)
+        return 0
+    if not args or args[0] not in ("load", "remove", "status") or len(args) > 2:
+        print(__doc__, file=sys.stderr)
         return 2
     cmd = args[0]
     path = os.path.abspath(args[1] if len(args) > 1 else os.path.join(HERE, "..", "audit-overview.html"))
@@ -105,13 +112,13 @@ def main():
         return 0
     if has_real_data(blocks):
         print("ERROR: the page already holds real data (non-empty blocks without \"sample\": true). "
-              "Nothing was changed.")
+              "Nothing was changed.", file=sys.stderr)
         return 1
     if cmd == "load":
         with open(SAMPLE, encoding="utf-8") as f:
             sample = json.load(f)
         if not isinstance(sample, dict) or not isinstance(sample.get("meta"), dict) or sample["meta"].get("sample") is not True:
-            print("ERROR: examples/sample-data.json must carry meta.sample = true. Nothing was changed.")
+            print("ERROR: examples/sample-data.json must carry meta.sample = true. Nothing was changed.", file=sys.stderr)
             return 1
         values = SCHEMA.migrate({n: sample[n] for n in BLOCKS}, SCHEMA.version_of(sample))
     else:
@@ -124,7 +131,7 @@ def main():
     if rc != 0:
         with open(path, "w", encoding="utf-8", newline="") as f:
             f.write(html)
-        print("ERROR: the build failed; the page was restored.")
+        print("ERROR: the build failed; the page was restored.", file=sys.stderr)
         return 1
     print("sample data loaded" if cmd == "load" else "sample data removed")
     return 0

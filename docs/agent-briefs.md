@@ -49,7 +49,7 @@ Result: <workdir>/C_usage.md
 ```text
 Task: Assess ballast, overlaps and fit.
 Basis: <workdir>/inventory.tsv (description characters; tokens = characters / 3.7), <workdir>/C_usage.md,
-and <workdir>/profile.md (a short note from the owner about what the setup is used for).
+and <workdir>/profile.md (a few lines about what the owner uses Claude for; Claude asks the owner and writes the file before starting this agent; if it is missing, judge the fit from usage alone and say so).
 Per plugin or skill: permanent token cost, overlaps with other installed items (by name), fit to the profile,
 usage, region or industry bias, misfire risk, and one recommendation: Keep / Disable / Remove.
 Then group overlapping items into topics and name the item with the greatest added value in each.
@@ -69,7 +69,7 @@ over as they are and do not look the local plugins up again, except those report
 only these with the table below (the tool never fetches anything).
 Step 2: everything the tool does not cover (desktop plugins, claude.ai skills, own skills, MCP servers).
 Basis: <workdir>/inventory.tsv and the table "Where versions come from" in docs/review-guide.md, Phase 2.
-Baseline: the last <workdir>/L_versions_*.md (if there is one).
+Baseline: the existing <workdir>/L_versions.md from the last audit (if there is one; this run replaces it).
 
 One row per customization (for local plugins the output of check_versions.py, marked as such):
 name | kind | installed (version / commit / hash) | newest (version / commit) | evidence (file or URL)

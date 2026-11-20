@@ -260,6 +260,19 @@ shutil.copyfile(EMPTY_PAGE, empty)
 before = empty.read_bytes()
 rc, out = run("mcp_cost.py", write("fict2.txt", FICT), "--write", empty)
 assert rc == 1 and "data-tokens is empty" in out and empty.read_bytes() == before, out
+# the message names the concrete step (which block, which keys, which tool), and that step really works
+for needle in ('id="data-tokens"', '"now"', "tools/inventory.py", "tools/import_data.py", "replace null"):
+    assert needle in out, (needle, out)
+assert "ERROR" in subprocess.run(PY + [str(ROOT / "tools" / "mcp_cost.py"), str(W / "fict2.txt"), "--write", str(empty)],
+                                 capture_output=True, text=True).stderr  # errors go to stderr
+t = empty.read_text(encoding="utf-8")
+m = re.search(r'(id="data-tokens">)(.*?)(</script>)', t, re.S)
+assert m.group(2).strip() == "null"
+empty.write_text(t[:m.start(2)] + '{"now": 5000, "measured_on": "2026-11-20"}' + t[m.end(2):], encoding="utf-8")
+rc, out = run("mcp_cost.py", W / "fict2.txt", "--write", empty)
+assert rc == 0 and "Page updated" in out, out
+rc, out = run("mcp_cost.py", "--help")
+assert rc == 0 and "usage:" in out.lower()
 
 # a page whose data-tokens has no mcp key shows no MCP line and the check passes
 nomcp = W / "nomcp.html"

@@ -73,7 +73,7 @@ For MCP servers and connectors, read the sources in the table above. claude.ai c
 | **B Pattern scan (official plugins)** | small | Tabulate hooks and MCP servers of all plugins, grep scripts for network, exec and secret patterns, list outdated cache versions | `reports/B_pattern_scan.md` |
 | **C Usage** | small | `tools/count_usage.py` (and `tools/count_mcp_usage.py`) over all transcripts: skill calls, slash commands, agent types, MCP servers. Names and numbers only, no contents | `reports/C_usage.md` |
 | **D Redundancy and usefulness** | mid | Description length per plugin (ballast), overlaps, fit to your work, recommendation Keep / Disable / Remove | `reports/D_redundancy.md` |
-| **L Versions** | small | Version check of desktop plugins, claude.ai skills and own skills, plus whatever `check_versions.py` reports as unknown (see below) | `reports/L_versions_<date>.md` |
+| **L Versions** | small | Version check of desktop plugins, claude.ai skills and own skills, plus whatever `check_versions.py` reports as unknown (see below) | `reports/L_versions.md` |
 
 Ready-to-use briefs are in [agent-briefs.md](agent-briefs.md). Where you also have MCP servers or newly installed desktop plugins, run the same kind of agents for them (inventory: small model; security and usefulness: mid model).
 

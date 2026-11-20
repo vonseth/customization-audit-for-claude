@@ -2,7 +2,8 @@
 """Moves audit data into audit-overview.html, or writes the data of the page out to a file.
 
 Usage:  python3 -I tools/import_data.py <file.json> [--replace] [path-to-html]
-        python3 -I tools/import_data.py --export <file.json> [path-to-html]
+        python3 -I tools/import_data.py --export <file.json> [--force] [path-to-html]
+        python3 -I tools/import_data.py -h       # this text (reads nothing)
         Default page: ../audit-overview.html (relative to this script).
 
 import   Reads <file.json> (same shape as examples/sample-data.json: the ten blocks meta, plugins,
@@ -13,7 +14,11 @@ import   Reads <file.json> (same shape as examples/sample-data.json: the ten blo
          blocks into the page and runs tools/build_overview.py. Refuses (page unchanged) if the page
          already holds data, sample or real, unless --replace is given. <file.json> is never modified.
 --export Writes the current data blocks of the page to <file.json> in the same format (backup, or moving
-         your data to a newer download of the project). Refuses to overwrite the page itself.
+         your data to a newer download of the project). Refuses to overwrite the page itself (also through
+         a symlink or with different letter case) and refuses to overwrite an existing file unless --force
+         is given. The page needs its sibling folder assets/ for an import (it is used to build the page).
+
+Errors go to stderr: exit 1 = refused or failed (nothing changed), exit 2 = usage error, exit 0 = ok.
 
 Standard library only.
 """
@@ -115,17 +120,26 @@ def counts(values):
 
 
 def do_import(src, page, replace):
+    assets = os.path.join(os.path.dirname(page), "assets")
+    if not os.path.isfile(page):
+        print("ERROR: the page %s was not found. Nothing was changed." % page, file=sys.stderr)
+        return 1
+    if not os.path.isdir(assets):
+        print("ERROR: the folder %s next to the page is missing (it holds the styles and fonts the build needs). "
+              "Nothing was changed. Restore it from the project download." % assets, file=sys.stderr)
+        return 1
     html = read_page(page)
     blocks = SD.read_blocks(html)
     if holds_data(blocks) and not replace:
         print("ERROR: the page already holds data (sample or your own). Nothing was changed.\n"
               "Use --replace to overwrite it. Tip: save the current data first with\n"
-              "  python3 -I tools/import_data.py --export backup.json")
+              "  python3 -I tools/import_data.py --export backup.json", file=sys.stderr)
         return 1
     values = load_input(src)
     res = validate(page, html, values)
     if res.returncode != 0:
-        print("ERROR: the data does not fit the schema; nothing was changed.\n" + res.stdout.strip() + res.stderr.strip())
+        print("ERROR: the data does not fit the schema; nothing was changed.\n" + res.stdout.strip() + res.stderr.strip(),
+              file=sys.stderr)
         return 1
     new = SD.write_blocks(html, values)
     with open(page, "w", encoding="utf-8", newline="") as f:
@@ -134,7 +148,8 @@ def do_import(src, page, replace):
     if res.returncode != 0:
         with open(page, "w", encoding="utf-8", newline="") as f:
             f.write(html)
-        print("ERROR: the build failed; the page was restored.\n" + res.stdout.strip() + res.stderr.strip())
+        print("ERROR: the build failed; the page was restored.\n" + res.stdout.strip() + res.stderr.strip(),
+              file=sys.stderr)
         return 1
     print("Imported %s into %s" % (src, page))
     for label, n, extra in counts(values):
@@ -148,9 +163,19 @@ def do_import(src, page, replace):
     return 0
 
 
-def do_export(dest, page):
-    if os.path.abspath(dest) == os.path.abspath(page):
-        print("ERROR: the export file must not be the page itself.")
+def same_file(a, b):
+    """True if a and b are the same file (symlinks, hard links, letter case on case-insensitive disks)."""
+    if os.path.exists(a) and os.path.exists(b):
+        return os.path.samefile(a, b)
+    return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
+
+
+def do_export(dest, page, force=False):
+    if same_file(dest, page):
+        print("ERROR: the export file must not be the page itself.", file=sys.stderr)
+        return 1
+    if os.path.lexists(dest) and not force:
+        print("ERROR: %s already exists. Nothing was written. Use --force to overwrite it." % dest, file=sys.stderr)
         return 1
     blocks = SD.read_blocks(read_page(page))
     blocks = SCHEMA.migrate(blocks, SCHEMA.version_of(blocks))  # always written with schema_version
@@ -164,17 +189,29 @@ def do_export(dest, page):
 
 
 def main():
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
     args = sys.argv[1:]
+    if any(a in ("-h", "--help") for a in args):
+        print(__doc__)
+        return 0
     replace = "--replace" in args
     export = "--export" in args
-    rest = [a for a in args if a not in ("--replace", "--export")]
-    if not rest or len(rest) > 2 or any(a.startswith("--") for a in rest) or (export and replace):
-        print(__doc__)
+    force = "--force" in args
+    rest = [a for a in args if a not in ("--replace", "--export", "--force")]
+    if (not rest or len(rest) > 2 or any(a.startswith("-") and a != "-" for a in rest) or (export and replace)
+            or (force and not export)):
+        print(__doc__, file=sys.stderr)
         return 2
     page = os.path.abspath(rest[1] if len(rest) > 1 else os.path.join(HERE, "..", "audit-overview.html"))
-    if export:
-        return do_export(rest[0], page)
-    return do_import(rest[0], page, replace)
+    try:
+        if export:
+            return do_export(rest[0], page, force)
+        return do_import(rest[0], page, replace)
+    except (ValueError, OSError) as e:  # bad JSON or structure, unreadable or unwritable files
+        print("ERROR: %s" % e, file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

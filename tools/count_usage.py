@@ -3,6 +3,7 @@
 
 Usage:
     python3 -I tools/count_usage.py
+    python3 -I tools/count_usage.py -h        # this text
 
 What it reads (it writes nothing):
   - transcripts:   ~/.claude/projects/**/*.jsonl      (all OSes)
@@ -11,7 +12,7 @@ What it reads (it writes nothing):
     the Claude desktop app data folder (*.jsonl only, plugin code folders are
     skipped). macOS tested, Windows untested, not scanned on Linux.
 CUSTOMIZATION_AUDIT_HOME replaces the home directory (for testing).
-Missing files or folders are skipped with a note on stderr; exit code 0.
+Missing files or folders are skipped with a note on stderr; exit code 0 (2 for a usage error).
 
 Output (sections, tab-separated rows):
   PERIOD / TRANSCRIPT_FILES / DESKTOP_FILES / HISTORY_LINES / TOOL_USES_UNIQUE
@@ -22,6 +23,11 @@ Output (sections, tab-separated rows):
   MCP_TOOLS        tool, calls (top 60)
   OTHER_TOOLS_TOP  tool, calls (top 25)
 Tool calls are de-duplicated by their tool_use id.
+Slash commands: only real invocation records count in the transcripts (a user record whose text
+STARTS with <command-name> / <command-message>, once per record; the same tag inside pasted text,
+a quote or a tool result does not count). The history file records the same invocations again,
+so a history line is skipped when a transcript record of the same command lies within 60 seconds
+(matched one to one); history lines without a match (transcript deleted, no timestamp) are counted.
 """
 import collections
 import datetime
@@ -43,6 +49,9 @@ BUILTIN = {"clear", "help", "model", "config", "mcp", "init", "compact",
            "theme", "fast", "effort", "privacy-settings", "sandbox", "tasks"}
 
 CMD_TAG = re.compile(r"<command-name>\s*/?([^<\s]+)\s*</command-name>")
+# a real invocation record starts with the tags (optionally <command-message> first)
+CMD_START = re.compile(r"\s*(?:<command-message>[^<]*</command-message>\s*)?<command-name>")
+MATCH_SECONDS = 60
 CMD_LINE = re.compile(r"^/([A-Za-z][\w:.-]*)\s*$")
 
 tool_uses = {}         # key -> (name, input, ts)
@@ -57,11 +66,12 @@ def parse_ts(v):
     try:
         if isinstance(v, (int, float)):
             return datetime.datetime.fromtimestamp(v / 1000.0, datetime.timezone.utc)
-        t = datetime.datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+        text = re.sub(r"\.(\d+)", lambda m: "." + (m.group(1) + "000000")[:6], str(v).strip(), count=1)
+        t = datetime.datetime.fromisoformat(text.replace("Z", "+00:00"))
         if t.tzinfo is None:
             t = t.replace(tzinfo=datetime.timezone.utc)
         return t
-    except (ValueError, OSError, OverflowError):
+    except (ValueError, OSError, OverflowError, TypeError):
         return None
 
 
@@ -111,12 +121,39 @@ def scan_file(path):
             msg = rec.get("message")
             if rec.get("type") == "user" or (isinstance(msg, dict) and msg.get("role") == "user"):
                 txt = text_of(msg.get("content") if isinstance(msg, dict) else rec.get("content"))
-                for m in CMD_TAG.finditer(txt):
-                    slash_transcript.append(("/" + m.group(1), ts))
-                if not CMD_TAG.search(txt):
+                if rec.get("isMeta") or "toolUseResult" in rec:
+                    continue
+                if CMD_START.match(txt):
+                    m = CMD_TAG.search(txt)
+                    if m:
+                        slash_transcript.append(("/" + m.group(1), ts))
+                else:
                     m2 = CMD_LINE.match(txt.strip())
                     if m2:
                         slash_transcript.append(("/" + m2.group(1), ts))
+
+
+def merge_slash(transcript, history):
+    """Transcript commands plus the history commands that have no transcript twin (see the module text)."""
+    tol = datetime.timedelta(seconds=MATCH_SECONDS)
+    by_cmd = {}
+    for cmd, ts in transcript:
+        by_cmd.setdefault(cmd, ([], []))[0].append(ts)
+    out = list(transcript)
+    for cmd, ts in history:
+        by_cmd.setdefault(cmd, ([], []))[1].append(ts)
+    for cmd, (tr, hi) in by_cmd.items():
+        t = sorted(x for x in tr if x)
+        i = 0
+        for h in sorted(x for x in hi if x):
+            while i < len(t) and t[i] < h - tol:
+                i += 1
+            if i < len(t) and t[i] <= h + tol:
+                i += 1  # twin found in the transcript, already counted
+            else:
+                out.append((cmd, h))
+        out.extend((cmd, None) for x in hi if not x)
+    return out
 
 
 def fmt(ts):
@@ -124,6 +161,16 @@ def fmt(ts):
 
 
 def main():
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
+    args = sys.argv[1:]
+    if any(a in ("-h", "--help") for a in args):
+        print(__doc__)
+        return 0
+    if args:
+        print("usage: count_usage.py   (no arguments; see -h)", file=sys.stderr)
+        return 2
     claude = paths.claude_dir()
     projects_glob = glob.escape(str(claude / "projects")) + "/**/*.jsonl"
     history = claude / "history.jsonl"
@@ -198,7 +245,7 @@ def main():
             other[name] += 1
 
     slash_counts, slash_last = collections.Counter(), {}
-    for cmd, ts in slash_transcript + slash_history:
+    for cmd, ts in merge_slash(slash_transcript, slash_history):
         slash_counts[cmd] += 1
         if ts and (cmd not in slash_last or ts > slash_last[cmd]):
             slash_last[cmd] = ts
@@ -231,4 +278,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

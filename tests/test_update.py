@@ -280,7 +280,7 @@ after = snap(G)
 changed = sorted(k for k in after if after[k] != before.get(k))
 assert changed == ["CLAUDE.md", "audit-overview.html"], changed
 rc, out = call(G, "migrate", "--yes")
-assert rc == 0 and "Nothing to migrate" in out and snap(G) == after, out
+assert rc == 0 and "already current, nothing to migrate" in out.lower() and snap(G) == after, out
 print("git and migrate: OK")
 
 # ---- http_fetch refuses non-https and keeps the token out of messages
@@ -355,5 +355,155 @@ assert rc == 0, out
 assert outside.read_text(encoding="utf-8") == "precious outside content\n", "update wrote through a symlink"
 assert not victim.is_symlink() and victim.read_bytes() == (NEW / "tools" / "check_versions.py").read_bytes()
 print("symlink: OK")
+
+# ---- hardening round: each block fails on the previous code
+# schema_version validation (item 6)
+for badv in (-1, True, "1", 1.5):
+    try:
+        sch.migrate({"meta": {"schema_version": badv}}, sch.version_of({"meta": {"schema_version": badv}}))
+        raise AssertionError("invalid schema_version accepted: %r" % (badv,))
+    except ValueError as e:
+        assert "invalid schema_version" in str(e), e
+try:
+    sch.migrate({"meta": {}}, sch.CURRENT + 1)
+    raise AssertionError
+except ValueError as e:
+    assert "newer version" in str(e), e
+SV = make_old(W / "schema_cli")
+svp = SV / "audit-overview.html"
+svp.write_text(svp.read_text(encoding="utf-8").replace('"as_of"', '"schema_version": -1, "as_of"', 1), encoding="utf-8")
+(SV / ".git").mkdir()
+rc, out = call(SV, "migrate", "--yes")
+assert rc == 1 and "invalid schema_version" in out and "Traceback" not in out, out
+
+# pre-release precedence (item 7)
+pv = upd.parse_version
+assert pv("1.5.0-beta.1") < pv("1.5.0-beta.2") < pv("1.5.0-beta.10") < pv("1.5.0") < pv("1.5.1-alpha")
+assert pv("1.5.0-alpha") < pv("1.5.0-alpha.1") < pv("1.5.0-alpha.beta") < pv("1.5.0-beta")
+assert pv("1.5.0-1") < pv("1.5.0-alpha") and pv("1.5.0+b1") == pv("1.5.0") and pv("v1.2") == pv("1.2.0")
+assert pv("1.5.0-beta.1") != pv("1.5.0-beta.2") and pv("nonsense") is None
+
+# a block the new version adds is missing in the old page (item 1)
+M = make_old(W / "missing_block")
+m_html = (M / "audit-overview.html").read_text(encoding="utf-8")
+m_old = upd.read_blocks_lenient(upd.load_modules(M / "tools"), m_html)
+m_old.pop("open-items")
+rc_problem = upd._do_update(M, NEW, upd.plan(M, NEW), m_old, m_html, {})
+assert rc_problem is None, rc_problem
+assert blocks(M)["open-items"] == upd.load_modules(M / "tools").EMPTY["open-items"]
+
+# CRLF CLAUDE.md (item 2)
+crlf = ("# T\r\n<!-- USER:START decisions -->\r\nmine\r\nline2\r\n<!-- USER:END decisions -->\r\nrest\r\n"
+        "## Status and open items\r\nmy status\r\n\r\n## Next\r\n")
+secs, how_ = upd.extract_user_sections(crlf)
+assert how_ == {"decisions": "markers", "status": "heading"} and secs["decisions"] == "mine\r\nline2\r\n", (secs, how_)
+assert secs["status"].startswith("## Status and open items\r\nmy status") and secs["status"].endswith("\r\n\r\n")
+merged = upd.merge_user_sections("# new\n<!-- USER:START decisions -->\nold\n<!-- USER:END decisions -->\n", secs)
+assert "<!-- USER:START decisions -->\nmine\r\nline2\r\n<!-- USER:END decisions -->\n" in merged, repr(merged)
+assert "my status" in merged
+assert "<!-- USER:START status -->\r\n" not in merged  # markers follow the new file, text keeps its endings
+wrapped = upd.add_markers("## Decisions (kept deliberately)\r\nx\r\n\r\n## Next\r\n")
+assert wrapped.startswith("<!-- USER:START decisions -->\r\n## Decisions") and "<!-- USER:END decisions -->\r\n## Next" in wrapped
+CR = make_old(W / "crlf_proj")
+cr_rules = upd.add_markers((CR / "CLAUDE.md").read_text(encoding="utf-8")).replace("\n", "\r\n")
+upd.wr(CR / "CLAUDE.md", cr_rules)
+rc, out = call(CR, "apply", str(ZIP_NEW), "--yes")
+assert rc == 0, out
+cr_after = upd.rd(CR / "CLAUDE.md")
+assert "keep, my own decision line | 2026-11-20 |\r\n" in cr_after and "Status: my own status line.\r\n" in cr_after, cr_after
+
+# manifest validation before restore (item 3)
+for bad_entry in ({"original": "relative/x", "stored": "1/x", "type": "dir"},
+                  {"original": str(W / "a" / ".." / "proj"), "stored": "1/proj", "type": "dir"},
+                  {"original": str(W / "proj"), "stored": "../escape", "type": "dir"},
+                  {"original": str(W / "proj"), "stored": str(W / "escape"), "type": "dir"},
+                  {"original": str(W / "proj"), "stored": "1/proj", "type": "link"},
+                  {"original": str(W / "other"), "stored": "1/proj", "type": "dir"}):
+    try:
+        upd.check_entries([bad_entry], [W / "proj"], "x")
+        raise AssertionError("manifest entry accepted: %r" % (bad_entry,))
+    except upd.Stop:
+        pass
+upd.check_entries([{"original": str(W / "proj"), "stored": "1/proj", "type": "dir"}], [W / "proj"], "x")
+RB = make_old(W / "rollback_proj")
+rb_before = snap(RB)
+rc, out = call(RB, "apply", str(ZIP_NEW), "--yes")
+assert rc == 0, out
+rb_state = json.loads((RB / ".update-state.json").read_text(encoding="utf-8"))
+mf = HOME / ".claude" / "backups" / rb_state["backup"] / "manifest.json"
+good_manifest = mf.read_text(encoding="utf-8")
+man = json.loads(good_manifest)
+man["entries"][0]["original"] = str(RB) + "/../" + RB.name  # same place once normalised, but not a clean path
+mf.write_text(json.dumps(man), encoding="utf-8")
+after_apply = snap(RB)
+rc, out = call(RB, "rollback", "--yes")
+assert rc == 1 and "unsafe path" in out and snap(RB) == after_apply, out
+mf.write_text(good_manifest, encoding="utf-8")
+
+# the rollback preview lists what will be removed (item 4)
+(RB / "reports" / "made-after-update.md").write_text("new\n", encoding="utf-8")
+after_apply = snap(RB)
+rc, out = call(RB, "rollback", answer="n\n")
+assert rc == 1 and snap(RB) == after_apply
+assert "reports/made-after-update.md" in out and "will be removed" in out, out
+assert out.index("reports/made-after-update.md") < out.index("Roll back?"), out
+# a failing automatic restore names the by-hand command (item 3)
+real_restore = upd.restore_backup
+def _failing_restore(name, expected):
+    raise upd.Stop("simulated")
+upd.restore_backup = _failing_restore
+try:
+    upd.restore_or_hint("some-backup-2026-01-01", [RB])
+    raise AssertionError("no hint")
+except upd.Stop as e:
+    assert "simulated" in str(e) and "backup.py" in str(e) and " restore some-backup-2026-01-01" in str(e), str(e)
+finally:
+    upd.restore_backup = real_restore
+rc, out = call(RB, "rollback", "--yes")
+assert rc == 0, out
+assert not (RB / "reports" / "made-after-update.md").exists()
+
+# migrate: a current page is left byte-identical, even if its JSON is formatted differently (item 5)
+MG = make_old(W / "migrate_current")
+(MG / ".git").mkdir()
+assert call(MG, "migrate", "--yes")[0] == 0
+mg_page = MG / "audit-overview.html"
+mg_page.write_text(mg_page.read_text(encoding="utf-8").replace('"schema_version": 1', '"schema_version":1'), encoding="utf-8")
+mg_before = snap(MG)
+rc, out = call(MG, "migrate", "--yes")
+assert rc == 0 and "already current, nothing to migrate" in out.lower() and "->" not in out, out
+assert snap(MG) == mg_before, "a current page was rewritten"
+
+# --help prints the usage to stdout and exits 0; usage errors go to stderr with exit 2 (item 10)
+HELP_ROOT = make_old(W / "help_proj")
+help_before = snap(HELP_ROOT)
+for argv in (["--help"], ["-h"], ["apply", "--help"], ["rollback", "-h"]):
+    rc, out = call(HELP_ROOT, *argv)
+    assert rc == 0 and "Usage:" in out, (argv, out)
+assert snap(HELP_ROOT) == help_before
+p = subprocess.run(PY + [str(ROOT / "tools" / "update.py"), "--help"], capture_output=True, text=True)
+assert p.returncode == 0 and "Usage:" in p.stdout and p.stderr == "", p
+p = subprocess.run(PY + [str(ROOT / "tools" / "update.py"), "bogus"], capture_output=True, text=True)
+assert p.returncode == 2 and p.stdout == "" and "Usage:" in p.stderr, p
+print("hardening: OK")
+
+# symlinks in a backed-up project folder are restored as links (backup.py stores them as links)
+if hasattr(os, "symlink"):
+    SL = W / "sl_src"; DL = W / "sl_dst"
+    (SL / "sub").mkdir(parents=True); (DL / "sub").mkdir(parents=True)
+    (SL / "a.txt").write_text("a", encoding="utf-8")
+    os.symlink("a.txt", SL / "link.txt"); os.symlink("missing", SL / "dangling"); os.symlink("sub", SL / "dirlink")
+    (DL / "link.txt").write_text("real file", encoding="utf-8"); (DL / "dirlink").mkdir()
+    upd._sync_dir(SL, DL)
+    assert os.readlink(DL / "link.txt") == "a.txt" and os.readlink(DL / "dangling") == "missing"
+    assert os.readlink(DL / "dirlink") == "sub" and (DL / "a.txt").read_text(encoding="utf-8") == "a"
+    upd._sync_dir(SL, DL)   # idempotent
+    assert os.readlink(DL / "dirlink") == "sub"
+    OUT = W / "sl_outside"; OUT.mkdir()
+    shutil.rmtree(DL / "sub"); os.symlink(str(OUT), DL / "sub")   # a real folder in the backup is a link now
+    (SL / "sub" / "f.txt").write_text("f", encoding="utf-8")
+    upd._sync_dir(SL, DL)
+    assert not (DL / "sub").is_symlink() and (DL / "sub" / "f.txt").is_file() and not list(OUT.iterdir())
+    print("symlinks: OK")
 
 print("test_update: all checks passed")

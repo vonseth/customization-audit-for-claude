@@ -15,9 +15,10 @@ How "latest" is determined, per plugin:
   2. Version field: the marketplace entry's "version", else the plugin.json
      "version" in the plugin folder. Compared numerically with the installed
      version (installed newer or equal -> up to date). Build metadata ("+build")
-     is ignored, missing parts count as zero ("1.2" equals "1.2.0"), and a
-     pre-release ("2.0.0-beta.1") is older than the release of the same base
-     version ("2.0.0").
+     is ignored, missing parts count as zero ("1.2" equals "1.2.0"), and
+     pre-releases follow semver precedence: "2.0.0-beta.1" is older than
+     "2.0.0-beta.2", which is older than "2.0.0" (numeric identifiers compare
+     as numbers, others as text, a shorter list is older).
   3. No version field: commits. If the marketplace copy is a git checkout, the
      latest commit touching the plugin folder is read with read-only git. The
      plugin counts as up to date when the installed commit equals it or when
@@ -34,8 +35,9 @@ Output: one block per plugin (name, marketplace, installed, latest, status,
 history link) plus the last update time of each marketplace copy; --json
 prints the same data as JSON. If installed_plugins.json does not exist (no local
 plugins, e.g. only the desktop app is used), a note goes to stderr, the result is
-empty (also with --json) and the exit code is 0. Exit code 0, or 2 on an error
-(installed_plugins.json exists but is unreadable).
+empty (also with --json) and the exit code is 0. Exit code 0; 1 on an error
+(installed_plugins.json exists but is unreadable); 2 on a usage error. -h and
+--help print this text to stdout and exit 0; errors go to stderr.
 
 The environment variable CUSTOMIZATION_AUDIT_HOME replaces the home directory.
 """
@@ -49,6 +51,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import paths  # noqa: E402
 
+SHA_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
 UP, NEWER, UNKNOWN = "up to date", "newer available", "unknown"
 
 
@@ -65,7 +68,7 @@ def git_run(repo, *args):
     """Run a read-only git command (env, timeout); return the CompletedProcess or None."""
     try:
         return subprocess.run(["git", "-C", str(repo)] + list(args), capture_output=True,
-                              text=True, timeout=30, env=dict(os.environ, GIT_OPTIONAL_LOCKS="0"))
+                              text=True, encoding="utf-8", errors="replace", timeout=30, env=dict(os.environ, GIT_OPTIONAL_LOCKS="0"))
     except (OSError, subprocess.SubprocessError):
         return None
 
@@ -79,21 +82,23 @@ def git(repo, *args):
 def vkey(v):
     """Sortable key of a version string, or None if it has no numbers.
 
-    Build metadata after "+" is dropped; a suffix after "-" marks a pre-release,
-    which sorts before the release of the same base version.
+    Build metadata after "+" is dropped. A suffix after "-" is a pre-release with semver precedence: it
+    sorts before the release of the same base version, numeric identifiers compare as numbers, the others as
+    text (numbers before text), and a shorter identifier list is older than a longer one with the same start.
     """
     base, _, pre = str(v).split("+")[0].partition("-")
     nums = [int(n) for n in re.findall(r"\d+", base)]
     if not nums:
         return None
-    return (tuple(nums), 0 if pre else 1)
+    ids = tuple((0, int(i), "") if i.isdigit() else (1, 0, i) for i in pre.split(".")) if pre else ()
+    return (tuple(nums), 0 if pre else 1, ids)
 
 
 def older(a, b):
     """True if version key a is older than b (both from vkey); shorter tuples are zero-padded."""
     n = max(len(a[0]), len(b[0]))
     pa, pb = a[0] + (0,) * (n - len(a[0])), b[0] + (0,) * (n - len(b[0]))
-    return (pa, a[1]) < (pb, b[1])
+    return (pa, a[1], a[2]) < (pb, b[1], b[2])
 
 
 def is_commit_like(v):
@@ -126,6 +131,8 @@ def check(key, inst, known):
     ver, sha = inst.get("version"), inst.get("gitCommitSha") or ""
     if not sha and is_commit_like(ver):
         sha = ver
+    if not isinstance(sha, str) or not SHA_RE.match(sha):
+        sha = ""  # not a commit id (could even look like a git option): treated as unknown, never passed to git
     res = {"name": name, "marketplace": mkt, "installed_version": ver,
            "installed_commit": sha[:8] or None, "latest_version": None,
            "latest_commit": None, "status": UNKNOWN, "reason": None, "history": None}
@@ -134,7 +141,11 @@ def check(key, inst, known):
         res["reason"] = "marketplace not listed in known_marketplaces.json"
         return res
     src = km.get("source")
-    mdir = Path(km.get("installLocation") or "")
+    loc = km.get("installLocation")
+    if not isinstance(loc, str) or not loc.strip():
+        res["reason"] = "marketplace location unknown (installLocation is empty or missing)"
+        return res
+    mdir = Path(loc)
     ref = src.get("ref") if isinstance(src, dict) else None
     entry = find_entry(mdir, name) if mdir.is_dir() else None
     if entry is None:
@@ -184,7 +195,7 @@ def check(key, inst, known):
         return res
     gcs = (mdir / ".gcs-sha")
     if gcs.is_file():
-        snap = gcs.read_text().strip()
+        snap = gcs.read_text(encoding="utf-8").strip()
         res["latest_commit"] = snap[:8]
         if sha and (snap.startswith(sha) or sha.startswith(snap)):
             res["status"] = UP
@@ -220,12 +231,18 @@ def run():
 
 def main(argv):
     """Entry point."""
-    if any(a not in ("--json",) for a in argv):
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
+    if any(a in ("-h", "--help") for a in argv):
         print(__doc__)
-        return 2 if any(a not in ("-h", "--help") for a in argv) else 0
+        return 0
+    if any(a not in ("--json",) for a in argv):
+        print(__doc__, file=sys.stderr)
+        return 2
     out = run()
     if out is None:
-        return 2
+        return 1
     if "--json" in argv:
         print(json.dumps(out, indent=2))
         return 0
