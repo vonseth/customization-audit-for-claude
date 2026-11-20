@@ -72,7 +72,7 @@ Rules worth knowing:
 
 ## Generated versus hand-edited
 
-`tools/build_overview.py` replaces only the content between the markers `<!-- AUTO:NAME:START -->` and `<!-- AUTO:NAME:END -->` for these names: SAMPLE, ASOF, KPIS, OPEN-ITEMS, TOKENS, OVERLAPS, LIST, STYLE. The history timeline and the MCP line are part of the TOKENS region. Everything else is left byte for byte as it is:
+`tools/build_overview.py` replaces only the content between the markers `<!-- AUTO:NAME:START -->` and `<!-- AUTO:NAME:END -->` for these names: VERSION (the installed version from the file `VERSION`, shown after the title; optional, pages from before 1.4.3 have no such marker), SAMPLE, ASOF, KPIS, OPEN-ITEMS, TOKENS, OVERLAPS, LIST, STYLE. The history timeline and the MCP line are part of the TOKENS region. Everything else is left byte for byte as it is:
 
 - **Generated:** sample notice, "As of" date, key figures, open items, tokens card, overlaps section, the list with all groups, and the embedded style (from `assets/style.css` and `assets/fonts/`).
 - **Hand-edited:** the data blocks (your data), the documentation table, the glossary, the usage section and the footer text.

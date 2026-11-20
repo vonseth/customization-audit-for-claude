@@ -73,6 +73,7 @@ h2{font-size:48px;line-height:1.1;letter-spacing:-1px;margin:0 0 var(--s-md)}
 h3{font-size:28px;line-height:1.2;letter-spacing:-.3px;margin:var(--s-xxl) 0 var(--s-xs)}
 h4{font-size:20px;line-height:1.3;letter-spacing:-.3px;margin:var(--s-xl) 0 var(--s-sm)}
 .count{font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0;color:var(--muted);margin-left:var(--s-xs)}
+h1 .version{font-size:.5em;margin-left:.57em}
 
 /* Jump bar */
 #jumpbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px var(--s-lg);padding:var(--s-md) 0;border-bottom:1px solid var(--hairline)}

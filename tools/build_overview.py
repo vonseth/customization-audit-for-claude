@@ -1143,10 +1143,25 @@ def replace_inline(html, name, content):
     return html[:a + len(start)] + content + html[b:]
 
 
+def version_markup(page_path):
+    """Installed version from the VERSION file next to the page, shown after the h1 like a count."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(page_path)), "VERSION"), encoding="utf-8") as f:
+            v = f.read().strip()
+    except OSError:
+        return ""
+    if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", v):
+        return ""
+    return ' <span class="count version">%s</span>' % v
+
+
 def render(html, page_path):
     data = load_all(html)
     now_total = data["tokens"]["now"] if data["tokens"] else None
-    out = replace_inline(html, "SAMPLE", sample_markup(data))
+    out = html
+    if "<!-- AUTO:VERSION:START -->" in out:     # optional: pages from before 1.4.3 have no such marker
+        out = replace_inline(out, "VERSION", version_markup(page_path))
+    out = replace_inline(out, "SAMPLE", sample_markup(data))
     out = replace_inline(out, "ASOF", asof_markup(data))
     out = replace_marker(out, "KPIS", kpi_cards(data))
     out = replace_marker(out, "OPEN-ITEMS", open_items_markup(data))

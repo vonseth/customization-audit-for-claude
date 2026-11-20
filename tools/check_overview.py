@@ -294,6 +294,9 @@ def check_generator(path, raw):
         assets = os.path.join(os.path.dirname(os.path.abspath(path)), "assets")
         if os.path.isdir(assets):
             shutil.copytree(assets, os.path.join(tmp, "assets"))
+        version = os.path.join(os.path.dirname(os.path.abspath(path)), "VERSION")
+        if os.path.isfile(version):
+            shutil.copyfile(version, os.path.join(tmp, "VERSION"))
         run = subprocess.run([sys.executable, "-I", BUILDER, copy], cwd=tmp, capture_output=True, text=True)
         with open(copy, "rb") as f:
             after = f.read()

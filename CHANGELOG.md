@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 1.4.3 – 2026-11-20
+
+### Added
+
+- The overview page shows the installed version after its title, in the same style and proportion as the count next to a group heading. `build_overview.py` reads it from the file `VERSION` next to the page (new marker `AUTO:VERSION`; optional, so pages from before 1.4.3 still build). Test: `test_build_version.py`.
+
+### Changed
+
+- `check_overview.py`: the idempotency check copies `VERSION` along with the page.
+
 ## 1.4.2 – 2026-11-20
 
 Fixes from a full review of 1.4.1.
