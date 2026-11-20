@@ -56,6 +56,8 @@ data-mcp   list of objects, MCP servers and connectors
   status*        "connected" | "not_signed_in" | "removed"       (not_signed_in goes to a collapsed subgroup)
   origin (T), discussed (bool), login (T), tokens, usage (T), recommendation (T), overlaps_with (T),
   purpose (T), security (T), organization
+  context_tokens int >= 0   measured context size of ALL tools of the server, loaded and deferred together
+                            (tools/mcp_cost.py --write sets it); shown in the details as "Context size (all tools)"
 
 data-builtin   list of objects, parts of the app (listed only, not counted anywhere)
   name*, id (string, e.g. "@builtin"), function (T, column "Purpose"), usage (T), note (T)
@@ -91,6 +93,22 @@ data-tokens   object or null (null = nothing measured yet)
   measured_on    string ISO date or null
   parts          list of {"label": T, "tokens": int} (max 4), the stacked bar; shares come from the tokens
   note           T        extra text under the card
+  mcp            object   optional, measured MCP cost (tools/mcp_cost.py --write sets it); one line under the
+                          comparison / bars: "MCP servers add ~N tokens per session (measured ...); another ~M load
+                          only when needed."
+    permanent*     int >= 0   loaded MCP tools + server instructions per session
+    deferred*      int >= 0   tools that are loaded only on demand (0 = that part of the sentence is left out)
+    measured_on    string ISO date or null
+
+data-history   list of snapshots, one per audit (tools/history.py appends them); [] = none
+  date*          string ISO date YYYY-MM-DD; sorted ascending, no date twice
+  tokens*        int     measured permanent tokens per session at that date
+  installed*     int     plugins and own skills installed (like the first key figure card)
+  removed*       int     plugins and own skills removed (like the "removed" key figure card)
+  candidates*    int     candidates still listed as not installed
+  note           T       short remark on the snapshot
+  With two or more snapshots the token card shows a "History" timeline (one row per snapshot, bar scaled
+  to the highest token value). With none or one snapshot nothing is shown.
 
 * = required. Counting rules of the key figures: "not yet discussed" counts plugins, MCP servers and
 candidates that are not removed and have discussed = false.
@@ -103,7 +121,8 @@ import re
 import sys
 import tempfile
 
-BLOCKS = ["meta", "plugins", "claudeai-skills", "mcp", "builtin", "candidates", "overlaps", "open-items", "tokens"]
+BLOCKS = ["meta", "plugins", "claudeai-skills", "mcp", "builtin", "candidates", "overlaps", "open-items", "tokens",
+          "history"]
 MARKERS = ["SAMPLE", "ASOF", "KPIS", "OPEN-ITEMS", "TOKENS", "OVERLAPS", "LIST", "STYLE"]
 
 SOURCES = ("own-marketplace", "desktop", "local", "own-skill")
@@ -200,6 +219,7 @@ def enum(*vals):
 
 
 TOKENS = "tokens"
+OPTI = "optint"
 
 SCHEMAS = {
     "plugins": ({"name": S, "source": enum(*SOURCES), "status": enum(*PLUGIN_STATUS), "organization": S,
@@ -209,13 +229,13 @@ SCHEMAS = {
                          "tokens": TOKENS, "overlaps_with": T, "assessment": T}, {"name", "status"}),
     "mcp": ({"name": S, "kind": enum(*MCP_KINDS), "status": enum(*MCP_STATUS), "organization": S, "origin": T,
              "discussed": B, "login": T, "tokens": TOKENS, "usage": T, "recommendation": T, "overlaps_with": T,
-             "purpose": T, "security": T}, {"name", "kind", "status"}),
+             "purpose": T, "security": T, "context_tokens": OPTI}, {"name", "kind", "status"}),
     "builtin": ({"name": S, "id": S, "function": T, "usage": T, "note": T}, {"name"}),
     "candidates": ({"name": S, "kind": enum(*CAND_KINDS), "url": U, "kind_detail": T, "provider": T, "purpose": T,
                     "overlaps_with": T, "note": T, "discussed": B, "removal_reason": T}, {"name", "kind", "url"}),
 }
 DEFAULTS = {T: lambda: Text(""), S: lambda: "", B: lambda: False, I: lambda: 0, TOKENS: lambda: Text(""),
-            U: lambda: ""}
+            U: lambda: "", OPTI: lambda: None}
 
 
 def conv(value, kind, where):
@@ -243,6 +263,10 @@ def conv(value, kind, where):
     if kind == I:
         if isinstance(value, bool) or not isinstance(value, int):
             raise Fail("%s: whole number expected, found %r" % (where, value))
+        return value
+    if kind == OPTI:
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise Fail("%s: whole number >= 0 expected, found %r" % (where, value))
         return value
     if kind == U:
         if not isinstance(value, str) or not re.match(r"^https://[^\s\"<>]+$", value):
@@ -356,8 +380,8 @@ def validate_overlaps(raw):
 def validate_tokens(raw):
     if raw is None:
         return None
-    if not isinstance(raw, dict) or set(raw) - {"now", "first_audit", "first_audit_estimated", "measured_on", "parts", "note"}:
-        raise Fail("data-tokens: null or an object with now, first_audit, first_audit_estimated, measured_on, parts, note expected")
+    if not isinstance(raw, dict) or set(raw) - {"now", "first_audit", "first_audit_estimated", "measured_on", "parts", "note", "mcp"}:
+        raise Fail("data-tokens: null or an object with now, first_audit, first_audit_estimated, measured_on, parts, note, mcp expected")
     if "now" not in raw:
         raise Fail("data-tokens: required key 'now' is missing")
     out = {"now": conv(raw["now"], I, "data-tokens, key now")}
@@ -369,6 +393,16 @@ def validate_tokens(raw):
     out["first_audit_estimated"] = est
     out["measured_on"] = conv(raw.get("measured_on"), D, "data-tokens, key measured_on")
     out["note"] = conv(raw.get("note", ""), T, "data-tokens, key note")
+    mcp = raw.get("mcp")
+    out["mcp"] = None
+    if mcp is not None:
+        if not isinstance(mcp, dict) or set(mcp) - {"permanent", "deferred", "measured_on"}:
+            raise Fail("data-tokens: mcp must be an object with permanent, deferred, measured_on")
+        for k in ("permanent", "deferred"):
+            if k not in mcp:
+                raise Fail("data-tokens, mcp: required key %r is missing" % k)
+        out["mcp"] = {k: conv(mcp[k], OPTI, "data-tokens, mcp, key %s" % k) for k in ("permanent", "deferred")}
+        out["mcp"]["measured_on"] = conv(mcp.get("measured_on"), D, "data-tokens, mcp, key measured_on")
     parts = raw.get("parts") or []
     if not isinstance(parts, list) or len(parts) > 4:
         raise Fail("data-tokens: parts must be a list with at most 4 entries")
@@ -380,6 +414,34 @@ def validate_tokens(raw):
                              "tokens": conv(p["tokens"], I, "data-tokens, part %d, key tokens" % i)})
     if out["parts"] and sum(p["tokens"] for p in out["parts"]) <= 0:
         raise Fail("data-tokens: the tokens of the parts add up to 0")
+    return out
+
+
+def validate_history(raw):
+    if not isinstance(raw, list):
+        raise Fail("data-history: list expected")
+    out, prev = [], None
+    schema = {"date": D, "tokens": I, "installed": I, "removed": I, "candidates": I, "note": T}
+    for i, r in enumerate(raw, 1):
+        label = "data-history, snapshot %d" % i
+        if not isinstance(r, dict):
+            raise Fail("%s: object expected" % label)
+        for k in r:
+            if k not in schema:
+                raise Fail("%s: unknown key %r (allowed: %s)" % (label, k, ", ".join(sorted(schema))))
+        for k in ("date", "tokens", "installed", "removed", "candidates"):
+            if k not in r:
+                raise Fail("%s: required key %r is missing" % (label, k))
+        o = {k: conv(r[k], kind, "%s, key %s" % (label, k)) if k in r else Text("") for k, kind in schema.items()}
+        if o["date"] is None:
+            raise Fail("%s: date must not be null" % label)
+        for k in ("tokens", "installed", "removed", "candidates"):
+            if o[k] < 0:
+                raise Fail("%s: %s must not be negative" % (label, k))
+        if prev is not None and o["date"] <= prev:
+            raise Fail("%s: dates must be unique and sorted ascending (%s after %s)" % (label, o["date"], prev))
+        prev = o["date"]
+        out.append(o)
     return out
 
 
@@ -397,6 +459,8 @@ def load_all(html):
             data[name] = validate_overlaps(raw)
         elif name == "tokens":
             data[name] = validate_tokens(raw)
+        elif name == "history":
+            data[name] = validate_history(raw)
         elif name == "open-items":
             if not isinstance(raw, list):
                 raise Fail("data-open-items: list expected")
@@ -421,6 +485,7 @@ LBL = {k: Text(*v) for k, v in {
     "login": ("Sign-in and access", "Anmeldung und Zugriff"), "security": ("Security", "Sicherheit"),
     "id": ("Identifier", "Kennung"), "note": ("Note", "Hinweis"), "function": ("Function", "Funktion"),
     "provider": ("Provider", "Anbieter"), "address": ("Address", "Adresse"),
+    "context": ("Context size (all tools)", "Kontextgröße (alle Werkzeuge)"),
 }.items()}
 
 SOURCE_LABEL = {"own-marketplace": Text("Plugin from an own marketplace", "Plugin aus eigenem Marktplatz"),
@@ -553,6 +618,9 @@ def mcp_entry(r, purpose_mode):
     details = [(LBL["kind"], MCP_KIND_LABEL[r["kind"]]), (LBL["origin"], r["origin"])]
     if r["organization"]:
         details.append((LBL["organization"], Text(r["organization"])))
+    if r["context_tokens"] is not None:
+        n = num(r["context_tokens"])
+        details.append((LBL["context"], Text("%s tokens" % n.en, "%s Tokens" % n.de)))
     details += [(LBL["login"], r["login"]), (LBL["usage"], r["usage"]), (LBL["security"], r["security"]),
                 (LBL["overlaps"], r["overlaps_with"]),
                 (LBL["recommendation"], r["recommendation"]) if purpose_mode else (LBL["purpose"], r["purpose"])]
@@ -723,7 +791,8 @@ def build_groups(data):
 
 def audit_started(data):
     return bool(data["plugins"] or data["claudeai-skills"] or data["mcp"] or data["builtin"] or data["candidates"]
-                or data["overlaps"]["fields"] or data["open-items"] or data["tokens"] or data["meta"]["as_of"])
+                or data["overlaps"]["fields"] or data["open-items"] or data["tokens"] or data["history"]
+                or data["meta"]["as_of"])
 
 
 def list_markup(data):
@@ -819,6 +888,50 @@ def asof_markup(data):
     return bi("As of %s." % d.en, "Stand %s." % d.de)
 
 
+def history_markup(history):
+    """Timeline inside the token card: one row per snapshot (date, bar, tokens, numbers). Needs 2+ snapshots."""
+    if len(history) < 2:
+        return []
+    top = max(h["tokens"] for h in history) or 1
+    z = ['<div class="history">', '  <h4>%s</h4>' % bi("History", "Verlauf"), '  <ol class="hist-rows">']
+    for i, h in enumerate(history):
+        d, n = date_text(h["date"]), num(h["tokens"], "~")
+        last = " is-now" if i == len(history) - 1 else ""
+        row = ['<li class="hist-row%s">' % last,
+               '<span class="hist-date">%s</span>' % bi(d.en, d.de),
+               '<span class="hist-bar" aria-hidden="true"><i style="width:%.1f%%"></i></span>' % (100.0 * h["tokens"] / top),
+               '<span class="hist-tok">%s</span>' % bi(n.en, n.de),
+               '<span class="hist-num">%s</span>' % bi(
+                   "%d installed, %d removed, %d candidates" % (h["installed"], h["removed"], h["candidates"]),
+                   "%d installiert, %d entfernt, %d Kandidaten" % (h["installed"], h["removed"], h["candidates"]))]
+        if not h["note"].empty():
+            row.append('<span class="hist-note">%s</span>' % bi(h["note"].en, h["note"].de))
+        row.append("</li>")
+        z.append("    " + "".join(row))
+    z += ["  </ol>", "</div>"]
+    return z
+
+
+def mcp_line_markup(m):
+    """One line under the comparison / bars: measured MCP cost (data-tokens "mcp")."""
+    if not m:
+        return []
+    p, d = num(m["permanent"], "~"), num(m["deferred"], "~")
+    en = "MCP servers add %s tokens per session" % p.en
+    de = "MCP-Server kosten zusätzlich %s Tokens je Sitzung" % p.de
+    if m["measured_on"]:
+        dt = date_text(m["measured_on"])
+        en += " (measured %s)" % dt.en
+        de += " (gemessen am %s)" % dt.de
+    if m["deferred"] > 0:
+        en += "; another %s load only when needed." % d.en
+        de += "; weitere %s werden nur bei Bedarf geladen." % d.de
+    else:
+        en += "."
+        de += "."
+    return ['<p class="mcp-line">%s</p>' % bi_raw(esc(en), esc(de))]
+
+
 def tokens_markup(data):
     t = data["tokens"]
     if t is None:
@@ -862,6 +975,8 @@ def tokens_markup(data):
             n = num(p["tokens"], "~")
             z.append('  <span class="p%d">%s %s</span>' % (i, bi(p["label"].en, p["label"].de), bi(n.en, n.de)))
         z.append("</div>")
+    z += mcp_line_markup(t["mcp"])
+    z += history_markup(data["history"])
     en, de = [], []
     if t["measured_on"]:
         d = date_text(t["measured_on"])

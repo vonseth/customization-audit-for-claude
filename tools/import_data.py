@@ -5,8 +5,8 @@ Usage:  python3 -I tools/import_data.py <file.json> [--replace] [path-to-html]
         python3 -I tools/import_data.py --export <file.json> [path-to-html]
         Default page: ../audit-overview.html (relative to this script).
 
-import   Reads <file.json> (same shape as examples/sample-data.json: the nine blocks meta, plugins,
-         claudeai-skills, mcp, builtin, candidates, overlaps, open-items, tokens; a missing block is
+import   Reads <file.json> (same shape as examples/sample-data.json: the ten blocks meta, plugins,
+         claudeai-skills, mcp, builtin, candidates, overlaps, open-items, tokens, history; a missing block is
          treated as empty, unknown keys are errors). First writes the blocks into a temporary copy of the
          page and builds it there; any schema error is reported and nothing is touched. Then writes the
          blocks into the page and runs tools/build_overview.py. Refuses (page unchanged) if the page
@@ -104,6 +104,7 @@ def counts(values):
         ("overlap topics", len(ov.get("fields", [])), "%d members" % sum(len(f.get("members", [])) for f in ov.get("fields", []))),
         ("open items", len(values["open-items"]), ""),
         ("tokens", 1 if values["tokens"] else 0, ""),
+        ("history snapshots", len(values["history"]), ""),
     ]
 
 

@@ -15,7 +15,7 @@ How an audit works, so you can repeat it every few months in the same scope and 
 
 - **Read-only first.** Everything in the review phases only reads.
 - **Nothing changes without your explicit consent.** First the complete list, then the one-by-one discussion, then the change.
-- **Back up before every change** to `~/.claude/backups/<reason>-<date>/`, and check the result after every change.
+- **Back up before every change** with `tools/backup.py create` to `~/.claude/backups/<reason>-<date>/`, and check the result after every change. Restoring (`backup.py restore`) asks for the user's confirmation.
 - **Measure, don't guess.** Count or measure numbers. Permanent context in tokens is roughly the number of characters divided by 3.7. Anything that is not measured is marked as an estimate.
 - **Smallest fitting model for sub-agents:** a small model for mechanical work (counting, pattern search, collecting), a mid-size model for judgement (security, overlaps, wording). Run independent agents in parallel.
 - **Independent quality gate** at the end: a separate agent checks the report against the raw data.
@@ -45,7 +45,15 @@ The desktop-app data folder:
 
 ## Phases
 
-### Phase 1: Inventory (Claude, a few minutes)
+### Phase 1: Changes since the last audit and inventory (Claude, a few minutes)
+
+Start with what changed:
+
+```text
+python3 -I tools/diff_inventory.py
+```
+
+It compares what is installed now with the page `audit-overview.html` and lists, per kind, what is **new**, what is **gone**, what changed its **status** and which **token estimates** differ (at least 20 percent and 50 tokens; `--threshold` changes the percentage). A token difference can simply come from a different way of measuring. On an empty page everything is reported as new. Exit code 1 means changes were found. Nothing is written. Then take the inventory:
 
 ```text
 python3 -I tools/inventory.py reports/inventory.tsv
@@ -63,15 +71,23 @@ For MCP servers and connectors, read the sources in the table above. claude.ai c
 | **B Pattern scan (official plugins)** | small | Tabulate hooks and MCP servers of all plugins, grep scripts for network, exec and secret patterns, list outdated cache versions | `reports/B_pattern_scan.md` |
 | **C Usage** | small | `tools/count_usage.py` (and `tools/count_mcp_usage.py`) over all transcripts: skill calls, slash commands, agent types, MCP servers. Names and numbers only, no contents | `reports/C_usage.md` |
 | **D Redundancy and usefulness** | mid | Description length per plugin (ballast), overlaps, fit to your work, recommendation Keep / Disable / Remove | `reports/D_redundancy.md` |
-| **L Versions** | small | Installed vs newest version per customization (see below) | `reports/L_versions_<date>.md` |
+| **L Versions** | small | Version check of desktop plugins, claude.ai skills and own skills, plus whatever `check_versions.py` reports as unknown (see below) | `reports/L_versions_<date>.md` |
 
 Ready-to-use briefs are in [agent-briefs.md](agent-briefs.md). Where you also have MCP servers or newly installed desktop plugins, run the same kind of agents for them (inventory: small model; security and usefulness: mid model).
 
-**Version check (agent L, runs in parallel).** Where versions come from:
+**MCP cost (you run one command).** The context cost of connected MCP servers is only visible in Claude Code's `/context`. **The user runs it; Claude never does.** Ask the user to open a new Claude Code session, run `/context`, expand "MCP tools", copy the text and pass it on (as a file or pasted). Then:
+
+```text
+python3 -I tools/mcp_cost.py <file> --write
+```
+
+(Put the file before `--write`.) Measured: **permanent** = loaded MCP tools + MCP server instructions; **deferred** = tools loaded only on demand, reported separately; per server the number of tools and the total tokens of all its tools. The per-server totals cannot be split into loaded and deferred. The result goes to `data-tokens.mcp` (MCP line of the token card) and to `context_tokens` of each matching MCP entry. Without `--write` the tool only prints.
+
+**Version check.** Run `python3 -I tools/check_versions.py` first (add `--json` for machine-readable output). It covers **local plugins** offline: it compares the installed version or commit with the local marketplace copy that the app keeps (version field if there is one, else the latest commit that touched the plugin folder) and answers "up to date", "newer available" or "unknown" with the reason. It fetches nothing, so "latest" means latest in the local copy. **Agent L** (runs in parallel) covers what the tool cannot: desktop plugins, claude.ai skills, own skills, MCP servers, and local plugins reported as "unknown". Where versions come from:
 
 | Kind | Installed | Newest |
 |---|---|---|
-| Local plugins | `installed_plugins.json` (version, `gitCommitSha`) | `plugin.json` or last commit of the source repository, read with `gh api`; **not** `plugin marketplace update` (that changes your setup) |
+| Local plugins | `installed_plugins.json` (version, `gitCommitSha`) | `check_versions.py` (local marketplace copy). For "unknown": `plugin.json` or last commit of the source repository, read with `gh api`; **not** `plugin marketplace update` (that changes your setup) |
 | Desktop-app plugins | `version` in `rpm/manifest.json` or the plugin's `plugin.json` | Managed by the app; compare with the last audit report. For third-party plugins with a GitHub source also check their newest version |
 | claude.ai skills | No version number; SHA-256 of each `SKILL.md` | Managed by Anthropic; a changed hash since the last audit means a new version |
 | Own skills (`~/.claude/skills/`) | Commit recorded in an origin note you keep next to the skill | Last commit of the source repository |
@@ -107,8 +123,9 @@ One package at a time using [explanation-template.md](explanation-template.md). 
 
 - **Remove or disable a local plugin:** `claude plugin uninstall <name>@<marketplace>` or `claude plugin disable <name>@<marketplace>`; then check `installed_plugins.json` and `enabledPlugins`.
 - **Desktop-app plugin or claude.ai skill:** you remove it in the app (Customize, then Plugins or Skills). Claude then checks with `python3 -I tools/check_desktop_plugin.py "<name>"`, which answers "Yes, it was removed." or "No, it was not removed."
-- **Own files:** back up to `~/.claude/backups/<reason>-<date>/` first, then remove.
+- **Own files:** back up first with `python3 -I tools/backup.py create <reason> <path> ...` (goes to `~/.claude/backups/<reason>-<date>/`), then remove.
 - **Update (only after your approval per item):** local plugin `claude plugin update <name>@<marketplace>`; desktop plugins and claude.ai skills are updated by the app; own skills are re-copied from the new commit with your own adjustments reapplied. Back up first, check the version afterwards.
+- **Before each of these changes** run `python3 -I tools/backup.py create <reason> <what changes>`; check the result afterwards. To undo, `python3 -I tools/backup.py restore <folder-name>` shows what would be overwritten and asks the user for a confirmation. Old backup folders without `manifest.json` are restored by hand.
 - **Effect:** changes apply from the **next session**. Test plugins in a new session.
 
 ### Phase 7: Documentation
@@ -119,6 +136,8 @@ After every change:
 2. Run `python3 -I tools/build_overview.py`, then `python3 -I tools/check_overview.py`.
 3. Add a line to the section "Changes made" in `reports/audit-report.md`.
 4. Update the decisions and status in `CLAUDE.md`.
+
+When the numbers of the page are final, store the snapshot for the history: `python3 -I tools/history.py snapshot` (`--note TEXT` adds a remark, `--replace` overwrites a snapshot of the same date, `list` shows all). Two or more snapshots make the token card show a timeline.
 
 Before you call an audit finished, run `python3 -I tools/check_overview.py --strict --inventory reports/inventory.tsv` (inventory written with `python3 -I tools/inventory.py reports/inventory.tsv`). If the inventory lists installed items that the page does not show yet, this check fails on purpose until every one of them is recorded. It reports outdated content (missing files, references to removed items, deviating values, too-long fields); update everything it reports. Texts maintained by hand (open items, group notes, documentation table, glossary) should then be read against the actual state by a mid-size agent.
 

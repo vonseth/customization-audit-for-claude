@@ -24,9 +24,17 @@ Checks (the expected values are computed from the JSON data blocks of the page):
      "replaceable_by" only for role replaceable; "overlaps_with" naming a removed customization (WARNING);
      as-of date in the header matches the data; fonts: embedded @font-face rules match assets/style.css
      (missing font files = WARNING; with --strict = FAIL).
- 12  Optional (--inventory FILE, the TSV written by tools/inventory.py): every inventory entry of the kinds
+ 12  History: data-history is sorted with unique dates; with two or more snapshots the token card shows exactly
+     one row per snapshot (date, tokens, numbers, bar width scaled to the maximum), with fewer none.
+ 13  Tool documentation: every tools/*.py (except paths.py) is mentioned by file name in README.md or
+     docs/manual.md (missing = WARNING; with --strict = FAIL).
+ 14  Optional (--inventory FILE, the TSV written by tools/inventory.py): every inventory entry of the kinds
      local-plugin, desktop-plugin, claude-ai-skill and own-skill appears on the page (FAIL if not);
      installed entries on the page that are not in the inventory (WARNING).
+ 15  MCP cost (always runs, listed after 14): with data-tokens "mcp" the token card shows exactly one line
+     "MCP servers add ~N tokens per session ..." with the numbers and the date of the data (both languages);
+     without it no such line. Every MCP entry with "context_tokens" shows "Context size (all tools)" with that
+     number, every entry without it shows no such row.
 
 Output: one line per check, PASS, WARN or FAIL, with details. Exit code 1 if any check fails, else 0.
 The file is not changed. Standard library only.
@@ -506,6 +514,97 @@ def check_content(text, tree, data, base, strict):
     return problems, warns
 
 
+def check_history(text, data):
+    hist = data["history"]
+    problems = []
+    m = re.search(r"<!-- AUTO:TOKENS:START -->(.*?)<!-- AUTO:TOKENS:END -->", text, re.S)
+    body = m.group(1) if m else ""
+    rows = re.findall(r'<li class="hist-row[^"]*">(.*?)</li>', body, re.S)
+    if len(hist) < 2:
+        if rows or 'class="history"' in body:
+            problems.append("history timeline is shown with %d snapshot(s); it needs at least 2" % len(hist))
+        return problems, len(hist)
+    if len(rows) != len(hist):
+        return ["history rows: expected %d, found %d" % (len(hist), len(rows))], len(hist)
+    top = max(h["tokens"] for h in hist) or 1
+    for h, row in zip(hist, rows):
+        d, n = bo.date_text(h["date"]), bo.num(h["tokens"], "~")
+        if bo.bi(d.en, d.de) not in row:
+            problems.append("history %s: date missing in the row" % h["date"])
+        if bo.bi(n.en, n.de) not in row:
+            problems.append("history %s: tokens %d missing in the row" % (h["date"], h["tokens"]))
+        w = re.search(r'<i style="width:([\d.]+)%"', row)
+        if not w or abs(float(w.group(1)) - 100.0 * h["tokens"] / top) > 0.06:
+            problems.append("history %s: bar width %s, expected %.1f%%" % (h["date"], w.group(1) if w else "-", 100.0 * h["tokens"] / top))
+        counts = bo.bi("%d installed, %d removed, %d candidates" % (h["installed"], h["removed"], h["candidates"]),
+                       "%d installiert, %d entfernt, %d Kandidaten" % (h["installed"], h["removed"], h["candidates"]))
+        if counts not in row:
+            problems.append("history %s: numbers missing in the row" % h["date"])
+        if not h["note"].empty() and bo.bi(h["note"].en, h["note"].de) not in row:
+            problems.append("history %s: note missing in the row" % h["date"])
+    return problems, len(hist)
+
+
+def check_mcp_cost(text, data):
+    problems = []
+    m = re.search(r"<!-- AUTO:TOKENS:START -->(.*?)<!-- AUTO:TOKENS:END -->", text, re.S)
+    body = m.group(1) if m else ""
+    lines = re.findall(r'<p class="mcp-line">(.*?)</p>', body, re.S)
+    mc = (data["tokens"] or {}).get("mcp")
+    if not mc:
+        if lines:
+            problems.append("MCP line is shown but data-tokens has no mcp")
+    else:
+        p, d = bo.num(mc["permanent"], "~"), bo.num(mc["deferred"], "~")
+        en = "MCP servers add %s tokens per session" % p.en
+        de = "MCP-Server kosten zusätzlich %s Tokens je Sitzung" % p.de
+        if mc["measured_on"]:
+            dt = bo.date_text(mc["measured_on"])
+            en += " (measured %s)" % dt.en
+            de += " (gemessen am %s)" % dt.de
+        en += "; another %s load only when needed." % d.en if mc["deferred"] else "."
+        de += "; weitere %s werden nur bei Bedarf geladen." % d.de if mc["deferred"] else "."
+        if len(lines) != 1:
+            problems.append("MCP line: expected exactly 1, found %d" % len(lines))
+        elif lines[0] != bo.bi_raw(esc(en), esc(de)):
+            problems.append("MCP line does not match the data: %s" % re.sub(r"<[^>]+>", "|", lines[0])[:160])
+    label = bo.bi(*bo.LBL["context"])
+    entries = {htmllib.unescape(re.search(r'<span class="e-name">(.*?)</span>', e).group(1)): e
+               for e in re.findall(r'<details class="entry".*?</details>', section(text, "g-mcp") + section(text, "g-removed"), re.S)
+               if re.search(r'<span class="e-name">', e)}
+    n = 0
+    for r in data["mcp"]:
+        ent = entries.get(r["name"])
+        if ent is None:
+            continue
+        if r["context_tokens"] is None:
+            if label in ent:
+                problems.append("%s: shows a context size but the data has none" % r["name"])
+            continue
+        n += 1
+        c = bo.num(r["context_tokens"])
+        want = "<dt>%s</dt><dd>%s</dd>" % (label, bo.bi("%s tokens" % c.en, "%s Tokens" % c.de))
+        if want not in ent:
+            problems.append("%s: context size %d missing in the details" % (r["name"], r["context_tokens"]))
+    return problems, n
+
+
+def check_tool_docs(base, strict):
+    """Every tools/*.py (except paths.py) must be named in README.md or docs/manual.md."""
+    tools = os.path.join(base, "tools")
+    if not os.path.isdir(tools):
+        return [], []
+    corpus = ""
+    for rel in ("README.md", os.path.join("docs", "manual.md")):
+        try:
+            corpus += open(os.path.join(base, rel), encoding="utf-8").read() + "\n"
+        except OSError:
+            pass
+    missing = ["tools/%s is not mentioned in README.md or docs/manual.md" % f
+               for f in sorted(os.listdir(tools)) if f.endswith(".py") and f != "paths.py" and f not in corpus]
+    return (missing, []) if strict else ([], missing)
+
+
 def check_inventory(inv_path, data):
     problems, warns = [], []
     try:
@@ -579,9 +678,15 @@ def main():
     add(10, "documentation table", p, "", w)
     p, w = check_content(text, tree, data, base, strict)
     add(11, "content rules and fonts", p, "", w)
+    p, n = check_history(text, data)
+    add(12, "history", p, "%d snapshots" % n)
+    p, w = check_tool_docs(base, strict)
+    add(13, "tool documentation", p, "", w)
     if inv:
         p, w = check_inventory(inv, data)
-        add(12, "inventory comparison", p, "", w)
+        add(14, "inventory comparison", p, "", w)
+    p, n = check_mcp_cost(text, data)
+    add(15, "MCP cost", p, "%d context sizes" % n)
     failed = 0
     for num, title, status, problems, warns, info in results:
         print("%-4s %2d  %s%s" % (status, num, title, (" (%s)" % info) if info else ""))

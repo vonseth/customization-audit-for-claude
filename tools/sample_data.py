@@ -24,9 +24,10 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 SAMPLE = os.path.join(HERE, "..", "examples", "sample-data.json")
 BUILDER = os.path.join(HERE, "build_overview.py")
-BLOCKS = ["meta", "plugins", "claudeai-skills", "mcp", "builtin", "candidates", "overlaps", "open-items", "tokens"]
+BLOCKS = ["meta", "plugins", "claudeai-skills", "mcp", "builtin", "candidates", "overlaps", "open-items", "tokens",
+          "history"]
 EMPTY = {"meta": {"as_of": None}, "plugins": [], "claudeai-skills": [], "mcp": [], "builtin": [], "candidates": [],
-         "overlaps": {"measured_on": None, "fields": []}, "open-items": [], "tokens": None}
+         "overlaps": {"measured_on": None, "fields": []}, "open-items": [], "tokens": None, "history": []}
 
 
 def pattern(name):

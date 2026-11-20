@@ -120,6 +120,8 @@ A dark card with the permanent context per session:
 - Under each value the label **measured** or **estimated**. Your first audit is often estimated, because the measurement tool did not exist yet or was not run; later values are measured.
 - A **stacked bar** that splits the total into up to four parts (for example desktop plugins, local plugins, own skills, claude.ai skills).
 - A short note with the measurement date. Connected MCP servers cost additional context and are not part of the bar.
+- **MCP line.** Once you have measured MCP cost (see [section 4](#4-running-an-audit)), one line says, for example: "MCP servers add ~22,580 tokens per session (measured on the date); another ~130,000 load only when needed." The first number is permanent: the MCP tools that are loaded plus the instructions the servers send. The second number is only loaded when a tool is actually needed. Without a measurement the line is not shown.
+- **History.** From the second snapshot on (see [section 6](#history-of-your-audits)) a timeline appears: one row per audit with the date, the permanent tokens, the number of installed and removed items and of candidates, and a bar scaled to the highest value. With zero or one snapshot nothing is shown.
 
 Only measured totals appear here. Per-group sums in the list are counts only, never token sums, because the per-row values are approximations.
 
@@ -176,7 +178,7 @@ Each group shows a count next to its name. Counts only, never token sums.
 
 **Columns in the closed row.** Name, Status (the tag), Tokens, Purpose. In candidates the third column is "Discussed" (discussed / open), and in the Removed archive the last column is "Reason / replacement".
 
-**Details when opened.** Click or tap a row. For plugins and skills you see: source, origin, category, external data sources, usage (number of calls), overlaps with, and the recommendation. MCP servers show kind, origin, sign-in and access, usage, security notes, overlaps and the recommendation. Candidates show kind, provider, address (the link to where it comes from), overlaps and a note.
+**Details when opened.** Click or tap a row. For plugins and skills you see: source, origin, category, external data sources, usage (number of calls), overlaps with, and the recommendation. MCP servers show kind, origin, sign-in and access, usage, security notes, overlaps and the recommendation, and, if measured, **Context size (all tools)**: the tokens of all tools of that server taken together, as listed by `/context`. This is the size of the server's whole tool list, not what it permanently costs: only part of the tools may be loaded, and the others only on demand. The split per server is not available. Candidates show kind, provider, address (the link to where it comes from), overlaps and a note.
 
 **Usage.** The count of calls in the Claude app on this computer, up to the date of the last count. "0" means no call in that time.
 
@@ -206,21 +208,42 @@ This is what you experience. The method behind it is in the [review guide](revie
 
 **Then Claude, without changing anything:**
 
-1. Takes an **inventory** of everything installed: local plugins, your own skills and agents, desktop-app plugins, claude.ai skills, MCP servers. It writes it to `reports/inventory.tsv`.
-2. Starts several **helper agents in parallel**, each read-only, each with the smallest model that fits the work: a security review, a pattern scan, a usage count, a redundancy and usefulness assessment, and a version check. Their partial reports go to `reports/`. Briefs are in [agent briefs](agent-briefs.md).
-3. **Consolidates** the findings in the running report `reports/audit-report.md` (a new section "Review of <date>" each time) and fills the overview page.
-4. Has an **independent agent check** the report against the raw data (the quality gate) and works in the corrections.
+1. First shows **what changed since the last audit** with `python3 -I tools/diff_inventory.py`: what is new, what is gone, what changed its status (for example disabled) and which token costs moved noticeably (at least 20 percent and 50 tokens). On a first audit it simply lists everything as new. Nothing is written.
+2. Takes an **inventory** of everything installed: local plugins, your own skills and agents, desktop-app plugins, claude.ai skills, MCP servers. It writes it to `reports/inventory.tsv`.
+3. Runs the **version check** for local plugins with `python3 -I tools/check_versions.py`. This works offline against the copies of the marketplaces that the app already keeps and answers "up to date", "newer available" or "unknown" per plugin. "Latest" means latest in that local copy; the tool fetches nothing. Desktop plugins and claude.ai skills have no local version source; a helper agent covers those (and whatever the tool reports as unknown).
+4. Starts several **helper agents in parallel**, each read-only, each with the smallest model that fits the work: a security review, a pattern scan, a usage count, a redundancy and usefulness assessment, and the version check for desktop plugins and claude.ai skills. Their partial reports go to `reports/`. Briefs are in [agent briefs](agent-briefs.md).
+5. **Measures the MCP cost** if you want the numbers (see below).
+6. **Consolidates** the findings in the running report `reports/audit-report.md` (a new section "Review of <date>" each time) and fills the overview page.
+7. Has an **independent agent check** the report against the raw data (the quality gate) and works in the corrections.
+
+### Measuring the MCP cost (you run one command)
+
+Connected MCP servers cost context in every session, but that cost cannot be read from files. It is shown by Claude Code's `/context` command, and **only you run it**; Claude never runs `/context` itself. Claude asks you to:
+
+1. Open a **new** Claude Code session (so the number is not inflated by a long conversation).
+2. Type `/context`, expand the entry **MCP tools** and copy the text (or save it to a file).
+3. Paste it into the audit session, or give Claude the file.
+
+Claude then runs `python3 -I tools/mcp_cost.py <file>` (with `--write` to store the result on the page). What is measured:
+
+- **Permanent cost** = the MCP tools that are loaded + the instructions that the MCP servers send. This is what every session carries.
+- **Deferred** = tools that are only loaded on demand. They cost nothing until used and are reported separately.
+- **Per server** the tool shows the number of tools and the total tokens of all its tools. These totals **cannot be split** into loaded and deferred, because `/context` lists each tool with its size but not which of them are loaded.
+
+Both the desktop app's copied text and the command line output are understood. The result appears in the MCP line of the token card and, per server, as "Context size (all tools)".
 
 **Then you decide, one item at a time.** Claude goes through the customizations in a fixed structure ([explanation template](explanation-template.md)): what it is, what it contains, what it costs, whether it fits what you do, overlaps, risks, what speaks for it, and a recommendation. Security findings come first, then new versions, then the biggest context items, then the rest. After each explanation Claude waits for your answer. You can ask questions at any time.
 
 **Only then does anything change.** Specifically:
 
 - **Nothing changes without your OK.** Claude lists first, explains, asks, and only then acts.
-- **A backup comes first.** Before every change Claude saves what it is about to change to `~/.claude/backups/<reason>-<date>/`, and checks the result afterwards.
+- **A backup comes first.** Before every change Claude saves what it is about to change with `python3 -I tools/backup.py create <reason> <paths>` to `~/.claude/backups/<reason>-<date>/`, and checks the result afterwards. Details in [section 6](#backups-and-restore).
 - **Some steps are yours.** Desktop-app plugins and claude.ai skills are removed by you in the Claude app; Claude tells you where to click and then checks that it worked ([section 5](#where-removal-happens)).
 - **Effect from the next session.** Changes apply when you start a new session. Test a changed plugin in a new session.
 
 **After every decision** Claude updates your data, rebuilds and checks the overview page, adds a line to "Changes made" in the report, and writes your decision into `CLAUDE.md`, so that nothing lives only in the chat.
+
+**When the audit is finished,** Claude stores a snapshot of the key numbers with `python3 -I tools/history.py snapshot` ([section 6](#history-of-your-audits)).
 
 **How long.** The inventory takes a few minutes. The parallel review phase usually takes a while longer, depending on how many customizations you have. The one-by-one discussion takes as long as you want it to; you can stop after any item and continue in another session, because everything is written down.
 
@@ -279,7 +302,35 @@ Things to keep in mind:
 
 Run the audit again every few months, in the same scope and form. Say: "Run the audit following docs/review-guide.md." Each run adds a new section to the running report, includes a version check, and shows items you already decided on only if something changed. Do a short check whenever you install several things at once, or when your sessions suddenly feel slower or more crowded.
 
-Check for new versions at any time: "Are there new versions of my customizations?" Claude names what changed and updates only when you ask.
+Check for new versions at any time: "Are there new versions of my customizations?" Claude runs the offline check for local plugins (`check_versions.py`), looks at desktop plugins and claude.ai skills separately, names what changed and updates only when you ask. "What changed since the last audit?" runs `diff_inventory.py`.
+
+### History of your audits
+
+At the end of every audit Claude stores a **snapshot**: the date, the permanent tokens, how many plugins and skills are installed and removed and how many candidates are on the list. Say "Store a snapshot of this audit" or let Claude do it as the last step:
+
+```text
+python3 -I tools/history.py snapshot
+python3 -I tools/history.py list
+```
+
+A second snapshot on the same date is refused unless you add `--replace`; a date before the latest snapshot is refused. From two snapshots on the token card shows the timeline, so you can see whether your setup grows or shrinks over time. Take the snapshot only when the numbers of the page are final.
+
+### Backups and restore
+
+Before every change Claude makes a backup with `backup.py`:
+
+```text
+python3 -I tools/backup.py create <reason> <path> [<path> ...]
+python3 -I tools/backup.py list
+python3 -I tools/backup.py show <folder-name>
+python3 -I tools/backup.py restore <folder-name>
+```
+
+- **create** copies the files or folders into `~/.claude/backups/<reason>-<date>/` and writes a `manifest.json` there: the original path of each item, the stored copy, the type, a checksum and the size. The reason uses lowercase letters, digits and hyphens.
+- **list** and **show** tell you what exists and what a backup holds. Backups made before version 1.3.0 have no manifest; they are listed as "no manifest (restore by hand)". They are still valid copies, but you or Claude have to copy the files back yourself.
+- **restore** first prints what would be written or overwritten (and which originals differ from the backup), then asks "Restore these N items? [y/N]". **Only "y" or "yes" proceeds.** Claude does not answer that question for you; it comes to you. Before anything is overwritten the current files are saved in a safety backup with the reason `before-restore`, and afterwards the checksums of the restored files are verified. Before anything is written, the stored files are checked against the manifest checksums; a damaged backup is refused. Nothing is deleted; files that are not in the manifest stay as they are. A manifest that points outside your home folder (symlinks are resolved) is refused.
+
+This is the only place where a tool of this project writes outside the project folder ([section 7](#7-security-and-privacy)).
 
 ### Installing something new
 
@@ -368,9 +419,10 @@ The import file is never modified. Exporting and importing again gives a byte-id
 ## 7. Security and privacy
 
 - **What the tools read.** Only local files: `~/.claude` (plugins, settings, your skills and agents, session transcripts, history) and the Claude desktop app's data folder (plugin lists, claude.ai skills). The usage counters read your transcripts and report names and numbers only, never the contents.
-- **What they write.** Nothing outside this project folder. The inventory and counters only read; the build script, `tools/sample_data.py` and `tools/import_data.py` write only the overview page; the optional output file of the inventory goes where you tell it.
+- **What they write.** Inside this project folder only, with one exception. The inventory, counters, `diff_inventory.py` and `check_versions.py` only read; the build script, `tools/sample_data.py`, `tools/import_data.py`, `tools/history.py` and `tools/mcp_cost.py --write` write only the overview page; the optional output file of the inventory goes where you tell it. **The exception is `tools/backup.py`:** it writes backups to `~/.claude/backups/` and, when you restore a backup and confirm, to the original paths listed in that backup's manifest. It never deletes your files (it only removes its own unfinished backup folder after a failed create) and refuses manifests that point outside your home folder.
+- **Your own `/context` output.** `mcp_cost.py` only reads text you give it. It never starts Claude and never reads `~/.claude`.
 - **No network.** The tools use no network access. The overview page has no external resources; its stylesheet and fonts are embedded.
-- **Backups.** Before every change Claude saves what it is about to change to `~/.claude/backups/<reason>-<date>/` on your computer.
+- **Backups.** Before every change Claude saves what it is about to change to `~/.claude/backups/<reason>-<date>/` on your computer. A restore overwrites files only after your explicit confirmation.
 - **Nothing is sent to third parties by this project.** The reports and the overview stay on your computer; what you share is up to you. Note that the audit runs in your own Claude session as usual, so what Claude reads in a session is processed like any other session content.
 - **Your data in files.** Reports, the export file and `CLAUDE.md` decisions may contain names of your customizations and notes about your work. Do not publish them without looking.
 - **Untrusted content stays data.** In the review phases, text found in repositories or on web pages is treated as data, not as instructions to the agent.
@@ -434,6 +486,27 @@ Changes apply from the next session. Start a new session and test there.
 **18. Can I check that the tools themselves work?**
 Yes: `python3 -I tools/selftest.py` builds a fake home folder in a temporary location, runs every tool against it and removes it again. It prints "selftest passed" if everything works.
 
+**19. `check_versions.py` says "unknown" for a plugin.**
+The tool works offline and only knows what the local marketplace copy tells it. "Unknown" appears when the plugin comes from an external source (not a relative path in the marketplace), when there is no version field and no usable git history in the copy, or when the installed commit is not in the copy. The reason is printed next to the plugin. It does not mean the plugin is outdated or broken; Claude checks those few by hand or leaves them out of the version report.
+
+**20. `diff_inventory.py` reports a token change, but I changed nothing.**
+Often it is only a different measurement. The page may hold a number measured another way (for example from `/context`) or an older estimate, while the inventory estimates characters divided by 3.7. A change is only reported if it is at least 20 percent of the page value and at least 50 tokens. Compare the reason with what you did; if nothing was updated, ignore it or raise the limit with `--threshold`.
+
+**21. Restore asks me for a confirmation. Is that normal?**
+Yes, on purpose. `backup.py restore` shows what would be written or overwritten, then asks "Restore these N items? [y/N]" and continues only on "y" or "yes". Nothing is restored on any other answer. Before overwriting, it saves the current state as `before-restore`, so even a restore can be undone.
+
+**22. `backup.py list` shows folders marked "no manifest".**
+Those are backups from before version 1.3.0. The files are intact, but a restore must be done by hand: copy the files back to their original locations. New backups always carry a manifest.
+
+**23. `mcp_cost.py` finds no MCP lines.**
+The pasted text was probably not the `/context` output, or the MCP part was collapsed. Open `/context` in a new session, expand "MCP tools", copy everything again and pass the file or the text. The tool understands the desktop app's copied text and the command line format.
+
+**24. Why is the MCP "Context size (all tools)" larger than what the token card says?**
+The token card's MCP line counts only what is permanent: loaded tools plus server instructions. "Context size (all tools)" adds up every tool of that server, including tools that are only loaded on demand. `/context` does not say which tools of a server are loaded, so the two numbers cannot be reconciled per server.
+
+**25. Can Claude run `/context` for me?**
+No. You run it in a Claude Code session and hand over the text. That keeps the measurement in your control and the tool free of any access to your Claude installation.
+
 ---
 
 ## 9. Glossary
@@ -463,6 +536,9 @@ Yes: `python3 -I tools/selftest.py` builds a fake home folder in a temporary loc
 | Uniqueness | A rating of one to five dots for how much a customization does that no other one here does. |
 | Quality gate | The independent check at the end of an audit: a separate agent compares the report with the raw data. |
 | Sub-agent | A helper agent Claude starts for one part of the audit, with the smallest model that fits the work. |
-| Backup | A copy of what is about to change, in `~/.claude/backups/<reason>-<date>/`, made before every change. |
+| Backup | A copy of what is about to change, in `~/.claude/backups/<reason>-<date>/`, made before every change with `backup.py`. |
+| Manifest | The file `manifest.json` in a backup folder: original path, stored copy, type, checksum and size of every item. Restore uses it; older backups have none. |
+| Snapshot | One entry in the history of your audits: date, permanent tokens, installed, removed and candidates. Stored by `history.py` at the end of an audit. |
+| Deferred | Tools that are not loaded at the start of a session but only when needed. They cost no permanent context until used; `/context` reports them separately. |
 | Data block | The JSON text at the end of `audit-overview.html` that holds your data; the visible page is built from it. |
 | Sample data | Fictional entries that fill the page so you can see how an audit looks; removable. |

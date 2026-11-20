@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 1.3.0 – 2026-11-20
+
+### Added
+
+- `tools/diff_inventory.py`: shows what changed since the last audit (new, gone, status, token change above a threshold) by comparing the current inventory with the page. Read-only.
+- `tools/check_versions.py`: offline version check of local plugins against the local marketplace copies (version field, else commits); reports "unknown" with a reason when it cannot tell. Read-only, no network.
+- `tools/mcp_cost.py`: measures the context cost of MCP servers from the text the user copies out of `/context` (desktop app and CLI formats); `--write` stores it on the page. Claude never runs `/context` itself.
+- `tools/history.py`: `snapshot` appends the key numbers of an audit to the page, `list` prints them.
+- `tools/backup.py`: `create`, `list`, `show` and `restore` for backups in `~/.claude/backups/` with a `manifest.json` (checksums); restore asks for confirmation and makes a safety backup first. The only tool that writes outside the project folder.
+- Data: block `data-history` (list of snapshots) and the optional keys `data-tokens.mcp` (`permanent`, `deferred`, `measured_on`) and `data-mcp[].context_tokens`.
+- Overview page: "History" timeline in the token card (from two snapshots), one line with the measured MCP cost, row "Context size (all tools)" in the details of MCP servers; Usage section and documentation table list the new functions.
+- `check_overview.py`: check 12 (history), 13 (every tool is documented in README.md or docs/manual.md), 14 (inventory comparison, optional) and 15 (MCP cost).
+- Documentation: README (features, tool table, privacy exception), manual (token card, running an audit, history and backups, FAQ, glossary), getting started, review guide, overview structure, agent briefs, `CLAUDE.md` working rules.
+
+### Changed
+
+- Review guide and agent brief L: local plugins are checked with `check_versions.py`; agent L only covers desktop plugins and claude.ai skills (and what the tool reports as unknown).
+- Backups before changes are made with `backup.py create`; the old `~/.claude/backups/<reason>-<date>/` folders without manifest still work but are restored by hand.
+- `import_data.py`, `sample_data.py` and the export include the history block.
+- Privacy statement: one exception to "writes only inside the project folder" (`backup.py`).
+
 ## 1.2.0 – 2026-11-20
 
 ### Added

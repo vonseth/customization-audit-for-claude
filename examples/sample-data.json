@@ -686,6 +686,7 @@
         "de": "7 calls"
       },
       "tokens": "~420",
+      "context_tokens": 6120,
       "origin": {
         "en": "Fictional connector from Acme",
         "de": "Fiktiver Connector von Acme"
@@ -717,6 +718,7 @@
         "de": "15 calls"
       },
       "tokens": "~380",
+      "context_tokens": 3980,
       "origin": {
         "en": "Fictional connector from Example Boards",
         "de": "Fiktiver Connector von Example Boards"
@@ -744,6 +746,7 @@
         "de": "2 calls"
       },
       "tokens": "~60",
+      "context_tokens": 410,
       "origin": {
         "en": "Fictional own server in ~/.claude.json",
         "de": "Fiktiver eigener Server in ~/.claude.json"
@@ -771,6 +774,7 @@
         "de": "3 calls"
       },
       "tokens": "~90",
+      "context_tokens": 1150,
       "origin": {
         "en": "Fictional desktop extension",
         "de": "Fiktive Desktop-Erweiterung"
@@ -1218,6 +1222,11 @@
     "first_audit": 9800,
     "first_audit_estimated": true,
     "measured_on": "2026-01-15",
+    "mcp": {
+      "permanent": 2420,
+      "deferred": 9240,
+      "measured_on": "2026-01-15"
+    },
     "parts": [
       {
         "label": {
@@ -1252,5 +1261,43 @@
       "en": "All numbers in this sample are fictional.",
       "de": "Alle Zahlen in diesem Beispiel sind fiktiv."
     }
-  }
+  },
+  "history": [
+    {
+      "date": "2025-09-10",
+      "tokens": 9800,
+      "installed": 31,
+      "removed": 0,
+      "candidates": 9,
+      "note": {
+        "en": "First audit (fictional).",
+        "de": "Erstes Audit (fiktiv)."
+      }
+    },
+    {
+      "date": "2025-10-22",
+      "tokens": 7100,
+      "installed": 26,
+      "removed": 5,
+      "candidates": 8
+    },
+    {
+      "date": "2025-12-03",
+      "tokens": 5200,
+      "installed": 21,
+      "removed": 9,
+      "candidates": 6
+    },
+    {
+      "date": "2026-01-15",
+      "tokens": 4200,
+      "installed": 19,
+      "removed": 2,
+      "candidates": 5,
+      "note": {
+        "en": "Sample state of the page.",
+        "de": "Beispielstand der Seite."
+      }
+    }
+  ]
 }

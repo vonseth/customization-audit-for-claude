@@ -86,10 +86,11 @@ Run the audit following docs/review-guide.md.
 
 ## 7. What happens next
 
-- Claude takes an inventory of what is installed and runs read-only checks (security, usage, overlaps, new versions), often with several helper agents in parallel.
+- Claude first shows what changed since the last audit (`python3 -I tools/diff_inventory.py`; on your first audit everything counts as new), takes an inventory of what is installed and runs read-only checks (security, usage, overlaps, new versions), often with several helper agents in parallel. Versions of local plugins are checked offline with `tools/check_versions.py`.
+- If you want to know what your MCP servers cost, Claude asks you to run `/context` in a new Claude Code session, expand "MCP tools" and paste the text; Claude then measures it with `tools/mcp_cost.py`. Claude never runs `/context` itself.
 - It consolidates the findings in a report (`reports/audit-report.md`) and fills the overview page.
 - Then it goes through the customizations **one at a time**, in a fixed structure (see [explanation-template.md](explanation-template.md)), and waits for your decision after each one.
-- **Nothing is changed without your OK.** Before any change Claude makes a backup in `~/.claude/backups/<reason>-<date>/`.
+- **Nothing is changed without your OK.** Before any change Claude makes a backup with `tools/backup.py create` in `~/.claude/backups/<reason>-<date>/`. A restore (`backup.py restore`) asks for your confirmation first.
 - Some things you do yourself in the Claude app (removing desktop-app plugins and claude.ai skills); Claude tells you where to click and then checks that it worked.
 - Changes take effect from the next session.
 
@@ -104,6 +105,8 @@ python3 -I tools/check_overview.py
 
 You can run both yourself at any time. Details: [overview-structure.md](overview-structure.md).
 
+When the audit is finished, Claude stores a snapshot of the key numbers for the history with `python3 -I tools/history.py snapshot`. From the second snapshot on, the token card shows a timeline.
+
 ## Troubleshooting
 
 | Problem | What to do |
@@ -114,6 +117,7 @@ You can run both yourself at any time. Details: [overview-structure.md](overview
 | Desktop-app data not found on Windows | The folder location is taken from the official documentation but untested. Tell Claude what you see; the tools skip missing folders with a note and continue. |
 | The page shows English but you want German (or the other way round) | It follows your browser language. Use the DE \| EN toggle at the top right of the page. |
 | The page looks unstyled or is missing a font | Run `python3 -I tools/build_overview.py`; it re-embeds `assets/style.css` and the fonts. A missing font file is reported as a warning. |
+| `check_versions.py` says "unknown" for a plugin | Expected for plugins from external sources or without version information in the local marketplace copy; the reason is printed. The tool works offline and never fetches anything. |
 | `check_overview.py` reports a warning about a missing file | A file listed in the Documentation section of the page is missing, for example after you deleted or renamed one. Restore it or update the table; with `--strict` such warnings become failures. |
 
 Next: [review-guide.md](review-guide.md).

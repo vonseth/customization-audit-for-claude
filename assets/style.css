@@ -124,6 +124,7 @@ section.block,.fold{padding:var(--s-section) 0;border-top:1px solid var(--hairli
 .arrow{grid-column:2;grid-row:2;font-size:32px;line-height:1;color:var(--on-dark-soft)}
 .saving{font-size:16px;color:var(--on-dark);margin:var(--s-lg) 0 0}
 .saving b{color:var(--saving)}
+.mcp-line{font-size:14px;color:var(--on-dark);margin:var(--s-lg) 0 0;max-width:80ch}
 .stack{display:flex;height:8px;border-radius:9999px;overflow:hidden;margin:var(--s-xl) 0 var(--s-sm)}
 .stack i{display:block;height:100%}
 .stack .p1,.stack-legend .p1::before{background:var(--p1)}
@@ -133,6 +134,21 @@ section.block,.fold{padding:var(--s-section) 0;border-top:1px solid var(--hairli
 .stack-legend{display:flex;flex-wrap:wrap;gap:var(--s-xs) var(--s-lg);font-size:13px;color:var(--on-dark)}
 .stack-legend>span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:var(--s-xs);vertical-align:1px}
 .tokencard .small{color:var(--on-dark-soft);margin:var(--s-lg) 0 0}
+
+/* History timeline inside the token card: date | bar | tokens, numbers below; pure CSS, no script */
+.history{margin-top:var(--s-xl);border-top:1px solid var(--dark-line);padding-top:var(--s-lg)}
+.history h4{margin:0 0 var(--s-md);font-size:16px;color:var(--on-dark)}
+.hist-rows{list-style:none;margin:0;padding:0;display:grid;gap:var(--s-md)}
+.hist-row{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) 5.5em;gap:4px var(--s-md);align-items:center;font-size:13px;color:var(--on-dark)}
+.hist-bar{display:block;height:8px;border-radius:9999px;background:var(--dark-line);overflow:hidden}
+.hist-bar i{display:block;height:100%;background:var(--first)}
+.is-now .hist-bar i{background:var(--now)}
+.hist-tok{text-align:right;font-variant-numeric:tabular-nums}
+.hist-num,.hist-note{grid-column:1 / -1;color:var(--on-dark-soft)}
+@media (max-width:640px){
+  .hist-row{grid-template-columns:minmax(0,1fr) 5.5em}
+  .hist-date{grid-column:1 / -1}
+}
 .tokencard code{color:var(--on-dark)}
 
 /* Tags (pills) with a status dot */
