@@ -4,12 +4,22 @@ A toolkit and working method to audit and tidy the customizations of your Claude
 
 **Unofficial: not affiliated with Anthropic.**
 
-## What you get
+## Features
 
-- **An overview page** (`audit-overview.html`): one self-contained HTML file with all your customizations, their status, token cost, overlaps and open items. It works offline and without JavaScript, also on a phone. It shows English or German depending on your browser language (there is a DE | EN toggle).
-- **Tools** (`tools/`): small read-only Python scripts for the inventory, usage counts and checks, plus the scripts that build and check the overview page.
-- **A review guide** (`docs/review-guide.md`): the audit method, step by step, so you can repeat it every few months in the same scope.
-- **Sample data**: fictional entries you can load to see how a filled page looks, and remove again.
+| Area | What it does |
+|---|---|
+| **Inventory** | Lists every plugin, skill, MCP server and connector: local, in the desktop app (per organization) and on claude.ai. |
+| **Security review** | Checks hooks, network access, executed code and data flows of each customization, with a risk level and evidence. |
+| **Token cost** | Measures how much permanent context your customizations take in every session, before and after the audit. |
+| **Overlaps** | Groups customizations that do the same job and rates each one: core, complement or replaceable. |
+| **Usage** | Counts how often skills, commands, agents and MCP tools were actually used in your sessions. |
+| **Version check** | Looks for newer versions of what you have installed and summarizes the changes; updates only on your request. |
+| **Guided decisions** | Claude explains one customization at a time in a fixed structure and asks before it changes anything; a backup comes first. |
+| **Candidates** | Keeps a list of things you might install later, researched but not installed, until you decide. |
+| **Overview page** | One self-contained HTML file (`audit-overview.html`) with status, tokens, overlaps and open items; offline, without JavaScript, also on a phone; English or German by browser language, with a DE \| EN toggle. |
+| **Export and import** | Saves all audit data to one JSON file and brings it into a fresh or newer download, so you never redo the first review. |
+| **Sample data** | Fictional entries to see a filled page before your first audit; removable with one command. |
+| **Checks** | Scripts that rebuild the page from its data and verify it (counts, links, both languages, no external resources). |
 
 ## Download
 
@@ -26,9 +36,21 @@ Or, if you know git: `git clone https://github.com/vonseth/customization-audit-f
 4. Tell Claude: "Start the customization audit." Claude first asks whether you want to see the sample overview or begin the first audit.
 5. Open `audit-overview.html` in your browser. For your first real audit say: "Run the audit following docs/review-guide.md."
 
-Already have audit data from an earlier download? Move it in with `python3 -I tools/import_data.py <file.json>` instead of repeating the first review (see "Moving existing data in" in [docs/getting-started.md](docs/getting-started.md)).
+The full walkthrough, including troubleshooting, is in [docs/getting-started.md](docs/getting-started.md). Everything about using the project day to day is in the [user manual](docs/manual.md).
 
-The full walkthrough, including troubleshooting, is in [docs/getting-started.md](docs/getting-started.md).
+## Export and import
+
+All data of your overview page fits into one JSON file. Use it as a backup, or to move your audit into a fresh or newer download without repeating the first review.
+
+1. **Export** in your current copy (open a terminal in the project folder):
+   `python3 -I tools/import_data.py --export my-audit.json`
+2. **Download** the new version and unzip it (see Download).
+3. **Import** in the new copy:
+   `python3 -I tools/import_data.py ../path/to/my-audit.json`
+   The tool checks the file on a temporary copy first, then writes the data and rebuilds the page. If the page already holds data (for example the sample), add `--replace`.
+4. **Check** the result: `python3 -I tools/check_overview.py`, then open `audit-overview.html`.
+
+The export file describes your personal setup. Keep it private; never commit it to a public repository. You can also simply tell Claude "Export my audit data" or "Import my audit data from …".
 
 ## Platform support
 
@@ -53,6 +75,7 @@ The tools only read local files and write nothing outside this folder. They use 
 |---|---|
 | `audit-overview.html` | The overview page (generated parts plus your data) |
 | `CLAUDE.md` | Project memory for Claude: working rules and your own decisions |
+| `docs/manual.md` | User manual: reading the page, audits, decisions, candidates, export and import, FAQ |
 | `docs/getting-started.md` | Set up and run the first audit |
 | `docs/review-guide.md` | The audit method |
 | `docs/explanation-template.md` | Fixed structure of each explanation of a customization |

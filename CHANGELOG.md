@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 1.2.0 – 2026-11-20
+
+### Added
+
+- User manual `docs/manual.md`: what the audit is for, first start, reading the overview, running an audit, decisions, day-to-day care (including adding candidates that were never installed, export and import), security and privacy, FAQ and troubleshooting, glossary.
+- README: feature list and a short step-by-step guide for export and import.
+- Overview page, section Usage: entries for adding a candidate, saving data (export) and bringing data along (import); the manual in the documentation table.
+- `check_overview.py --help`.
+
+### Fixed
+
+- Getting started and review guide described two check results inaccurately (missing-file warning, `--inventory` on a page without entries).
+
 ## 1.1.0 – 2026-11-20
 
 ### Added

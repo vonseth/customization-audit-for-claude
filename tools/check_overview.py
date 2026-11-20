@@ -532,6 +532,9 @@ def check_inventory(inv_path, data):
 
 def main():
     args = sys.argv[1:]
+    if any(a in ("-h", "--help") for a in args):
+        print(__doc__)
+        sys.exit(0)
     strict = "--strict" in args
     args = [a for a in args if a != "--strict"]
     inv = None

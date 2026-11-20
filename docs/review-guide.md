@@ -120,7 +120,7 @@ After every change:
 3. Add a line to the section "Changes made" in `reports/audit-report.md`.
 4. Update the decisions and status in `CLAUDE.md`.
 
-Before you call an audit finished, run `python3 -I tools/check_overview.py --strict --inventory reports/inventory.tsv` (inventory written with `python3 -I tools/inventory.py reports/inventory.tsv`). On a page that does not list your customizations yet, this check fails on purpose until every installed item is recorded. It reports outdated content (missing files, references to removed items, deviating values, too-long fields); update everything it reports. Texts maintained by hand (open items, group notes, documentation table, glossary) should then be read against the actual state by a mid-size agent.
+Before you call an audit finished, run `python3 -I tools/check_overview.py --strict --inventory reports/inventory.tsv` (inventory written with `python3 -I tools/inventory.py reports/inventory.tsv`). If the inventory lists installed items that the page does not show yet, this check fails on purpose until every one of them is recorded. It reports outdated content (missing files, references to removed items, deviating values, too-long fields); update everything it reports. Texts maintained by hand (open items, group notes, documentation table, glossary) should then be read against the actual state by a mid-size agent.
 
 ## Pitfalls worth knowing
 

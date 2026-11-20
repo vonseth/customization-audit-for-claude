@@ -114,6 +114,6 @@ You can run both yourself at any time. Details: [overview-structure.md](overview
 | Desktop-app data not found on Windows | The folder location is taken from the official documentation but untested. Tell Claude what you see; the tools skip missing folders with a note and continue. |
 | The page shows English but you want German (or the other way round) | It follows your browser language. Use the DE \| EN toggle at the top right of the page. |
 | The page looks unstyled or is missing a font | Run `python3 -I tools/build_overview.py`; it re-embeds `assets/style.css` and the fonts. A missing font file is reported as a warning. |
-| `check_overview.py` reports a warning about a missing file | Files such as `reports/audit-report.md` appear during your first audit. With `--strict` such warnings become failures. |
+| `check_overview.py` reports a warning about a missing file | A file listed in the Documentation section of the page is missing, for example after you deleted or renamed one. Restore it or update the table; with `--strict` such warnings become failures. |
 
 Next: [review-guide.md](review-guide.md).
