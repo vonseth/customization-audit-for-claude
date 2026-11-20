@@ -6,7 +6,7 @@ Answer in the language the user writes in.
 
 ## What this project is
 
-An unofficial tool (not affiliated with Anthropic) to audit and tidy Claude customizations: plugins, skills and MCP servers. The method is in `docs/review-guide.md`; the overview page is `audit-overview.html`, built from JSON data blocks by `tools/build_overview.py` and checked by `tools/check_overview.py` (structure: `docs/overview-structure.md`). All tools are read-only except the build script, `tools/sample_data.py`, `tools/import_data.py`, `tools/history.py` and `tools/mcp_cost.py --write` (these write only the overview page) and `tools/backup.py` (writes to `~/.claude/backups/`, and on a confirmed restore to the original paths).
+An unofficial tool (not affiliated with Anthropic) to audit and tidy Claude customizations: plugins, skills and MCP servers. The method is in `docs/review-guide.md`; the overview page is `audit-overview.html`, built from JSON data blocks by `tools/build_overview.py` and checked by `tools/check_overview.py` (structure: `docs/overview-structure.md`). All tools are read-only except the build script, `tools/sample_data.py`, `tools/import_data.py`, `tools/history.py` and `tools/mcp_cost.py --write` (these write only the overview page) and `tools/backup.py` (writes to `~/.claude/backups/`, and on a confirmed restore to the original paths). `tools/update.py` replaces the managed files of the project (after a preview, a confirmation and a full backup through `backup.py`) and is the only tool that uses the network.
 
 `tools/import_data.py` moves audit data between pages: `python3 -I tools/import_data.py <file.json> [--replace]` imports a JSON file in the shape of `examples/sample-data.json`, `python3 -I tools/import_data.py --export <file.json>` writes the current page data out (backup, or moving to a newer download). Never put such a file with personal data into a public repository.
 
@@ -34,7 +34,8 @@ All in `tools/`, started as `python3 -I tools/<name>.py`; the first lines of eac
 | `backup.py` | `create` before a change, `list`, `show`, `restore` |
 | `build_overview.py`, `check_overview.py` | Build and verify the page |
 | `sample_data.py`, `import_data.py` | Sample data; import and export of audit data |
-| `selftest.py` | Self-test of all tools (`paths.py` is internal) |
+| `update.py` | `check`, `apply [zip]`, `rollback`, `migrate`: update this copy; only on the user's request |
+| `selftest.py` | Self-test of all tools (`paths.py` and `schema.py` are internal) |
 
 ## Working rules
 
@@ -51,7 +52,9 @@ All in `tools/`, started as `python3 -I tools/<name>.py`; the first lines of eac
 11. **MCP cost only from the user's pasted `/context` output.** Never run `/context` yourself. Ask the user to run it in a new Claude Code session, expand "MCP tools" and paste the text or a file, then run `python3 -I tools/mcp_cost.py <file> --write` (file before `--write`). Permanent = loaded MCP tools + server instructions; deferred only on demand; per-server totals cannot be split.
 12. **After an audit** (numbers final, check passed) run `python3 -I tools/history.py snapshot`.
 13. **Write decisions down immediately** in this file, the report or the overview, not only in the chat.
+14. **Run `update.py` only on the user's request.** `python3 -I tools/update.py check` and `apply` use the network (read-only, api.github.com); `apply` and `rollback` ask the user for a confirmation: never answer that question yourself and never pass `--yes`. Keep the `USER:START` / `USER:END` markers in this file intact; what stands between them belongs to the user and is carried over by an update. Git checkouts: `git pull`, then `update.py migrate`.
 
+<!-- USER:START decisions -->
 ## Decisions (kept deliberately)
 
 Only present these again if something changed (new version, new finding, different usage).
@@ -60,9 +63,13 @@ Only present these again if something changed (new version, new finding, differe
 |---|---|---|
 | | | |
 
+<!-- USER:END decisions -->
+
+<!-- USER:START status -->
 ## Status and open items
 
 Status: not started.
 
 Open:
 -
+<!-- USER:END status -->

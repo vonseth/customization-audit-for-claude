@@ -51,7 +51,7 @@ At the end of the page, as `<script type="application/json" id="data-...">`. Unk
 
 | Block | Type | Holds |
 |---|---|---|
-| `data-meta` | object | `as_of` (ISO date or null), `sample` (true while sample data is loaded) |
+| `data-meta` | object | `as_of` (ISO date or null), `sample` (true while sample data is loaded), `schema_version` (integer, currently 1; a missing value means schema 0, data from before 1.4.0) |
 | `data-plugins` | list | Plugins and own skills: `name*`, `source*` (`own-marketplace`, `desktop`, `local`, `own-skill`), `status*` (`installed`, `disabled`, `removed`), `organization`, `origin`, `category`, `discussed`, `external_data`, `tokens`, `usage`, `recommendation`, `overlaps_with`, `purpose` |
 | `data-claudeai-skills` | list | `name*`, `status*` (`active`, `removed`), `organization`, `category`, `purpose`, `tokens`, `overlaps_with`, `assessment` |
 | `data-mcp` | list | `name*`, `kind*` (`connector`, `plugin-mcp`, `extension`, `own-server`, `leftover`, `app`), `status*` (`connected`, `not_signed_in`, `removed`), `origin`, `discussed`, `login`, `tokens`, `context_tokens` (int, tokens of all tools of the server as listed by `/context`; set by `mcp_cost.py --write`; shown in the details as "Context size (all tools)"), `usage`, `recommendation`, `overlaps_with`, `purpose`, `security`, `organization` |
@@ -99,7 +99,7 @@ Checks 12 to 15 were added in version 1.3.0:
 | Check | What it verifies |
 |---|---|
 | 12 History | `data-history` is sorted with unique dates; with two or more snapshots the token card has exactly one row per snapshot (date, tokens, numbers, bar width scaled to the maximum), with fewer none. |
-| 13 Tool documentation | Every `tools/*.py` except `paths.py` is mentioned by file name in `README.md` or `docs/manual.md` (missing = warning; with `--strict` = failure). |
+| 13 Tool documentation | Every `tools/*.py` except the internal modules `paths.py` and `schema.py` is mentioned by file name in `README.md` or `docs/manual.md` (missing = warning; with `--strict` = failure). |
 | 14 Inventory (optional) | With `--inventory`: every installed item of the inventory is on the page (failure), the reverse is a warning. This is the check described under Options below. |
 | 15 MCP cost | With `data-tokens.mcp` the token card shows exactly one MCP line with the numbers and the date (both languages), without it none; every MCP entry with `context_tokens` shows "Context size (all tools)", every entry without shows no such row. |
 
@@ -119,7 +119,9 @@ python3 -I tools/import_data.py --export <file.json> [page]      # write the dat
 python3 -I tools/import_data.py <file.json> [--replace] [page]   # import such a file into a page and rebuild
 ```
 
-The JSON file has the shape of `examples/sample-data.json`: one key per data block (`meta`, `plugins`, `claudeai-skills`, `mcp`, `builtin`, `candidates`, `overlaps`, `open-items`, `tokens`, `history`); a missing block counts as empty, an unknown key is an error. The import first writes the blocks into a temporary copy of the page and builds it there, so schema errors are reported without touching your page. It refuses to run when the page already holds data (sample or real) unless `--replace` is given, and it never modifies the input file. Exporting and importing the result again gives a byte-identical page. The export includes the history and the measured MCP numbers (they are part of `tokens` and `mcp`). Use it to back up your data or to move it into a newer download of the project.
+The JSON file has the shape of `examples/sample-data.json`: one key per data block (`meta`, `plugins`, `claudeai-skills`, `mcp`, `builtin`, `candidates`, `overlaps`, `open-items`, `tokens`, `history`); a missing block counts as empty, an unknown key is an error. The import first writes the blocks into a temporary copy of the page and builds it there, so schema errors are reported without touching your page. It refuses to run when the page already holds data (sample or real) unless `--replace` is given, and it never modifies the input file. Exporting and importing the result again gives a byte-identical page. The export includes the history and the measured MCP numbers (they are part of `tokens` and `mcp`). Use it to back up your data or to move it into a newer download of the project; `tools/update.py` does the move for you.
+
+**Schema version.** `data-meta.schema_version` records the data format (`tools/schema.py`, internal). Data without it counts as schema 0 and is migrated to the current version on import, on `update.py apply` and on `update.py migrate`; the page is always written with the current number. Data with a higher number than the tools know is refused with the advice to update the tools. A change of the data format later means: raise `CURRENT` in `schema.py`, add a migration step and describe it in `CHANGELOG.md`.
 
 ## Sample data
 

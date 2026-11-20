@@ -28,7 +28,7 @@ Either:
 
 Or with git: `git clone https://github.com/vonseth/customization-audit-for-claude.git`
 
-Keep the folder: your overview page, reports and decisions will live in it.
+Keep the folder: your overview page, reports and decisions will live in it. The file `VERSION` shows which version you have. From 1.4.0 on, use `python3 -I tools/update.py check` and `apply` for later updates (see [Updating in the manual](manual.md#updating-to-a-new-version)); you do not need to download again by hand.
 
 ## 3. Open the folder in Claude Code
 
@@ -63,7 +63,7 @@ python3 -I tools/sample_data.py remove
 
 ### Moving existing data in
 
-If you already did an audit (for example in an earlier download of this project), you do not have to redo it. Export the data from the old copy and import it into the new one:
+If you already did an audit in an earlier copy of this project, you do not have to redo it. If that copy has `tools/update.py` (version 1.4.0 or newer), simply update it there. Copies of version 1.3.0 or older do not contain `update.py` yet: for the first move to 1.4.0 use the manual path below once; from 1.4.0 on, `update.py` does this for you. Export the data from the old copy and import it into the new one:
 
 ```text
 python3 -I tools/import_data.py --export my-audit.json     # in the OLD copy: writes the data of audit-overview.html

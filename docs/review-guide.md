@@ -47,6 +47,8 @@ The desktop-app data folder:
 
 ### Phase 1: Changes since the last audit and inventory (Claude, a few minutes)
 
+Optionally, before an audit, ask whether a newer version of this project exists: `python3 -I tools/update.py check` (read-only; the only tool that uses the network). Apply an update only on your request (`update.py apply`, with its own confirmation and backup); never in the middle of an audit.
+
 Start with what changed:
 
 ```text

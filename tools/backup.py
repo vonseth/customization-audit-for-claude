@@ -57,7 +57,16 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import paths  # noqa: E402
 
-TOOL_VERSION = "1.3.0"
+def _read_version():
+    """Version of this project from the VERSION file next to tools/ ("unknown" if missing)."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "VERSION"), encoding="utf-8") as fh:
+            return fh.read().strip() or "unknown"
+    except OSError:
+        return "unknown"
+
+
+TOOL_VERSION = _read_version()
 MANIFEST = "manifest.json"
 REASON_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 

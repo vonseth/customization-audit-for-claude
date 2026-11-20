@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 1.4.0 – 2026-11-20
+
+### Added
+
+- `tools/update.py`: self-update with `check` (installed and latest version, release notes), `apply [zip]` (preview, confirmation, full backup through `backup.py`, replace the managed files, carry over your data and your `CLAUDE.md` sections, build, check, self-test; automatic restore on failure), `rollback` (restore from the backup of the last update) and `migrate` (for git users after `git pull`). The name of the last backup is kept in `.update-state.json` (ignored by git).
+- `VERSION` file with the installed version.
+- `schema_version` in `data-meta` (`tools/schema.py`, internal) with migrations; data without it counts as schema 0 and is migrated on import, update and `migrate`; data from a newer schema is refused.
+- `CLAUDE.md`: sections between `<!-- USER:START name -->` and `<!-- USER:END name -->` (decisions, status) are carried over unchanged by an update.
+- Tests `tests/test_update.py`; `check_overview.py` check 13 now excludes the internal modules `paths.py` and `schema.py`.
+
+### Changed
+
+- `backup.py` reads its version from `VERSION`.
+- Documentation: README (feature table, tool table, new section "Updating", privacy), manual (updating, network statement, FAQ, glossary), getting started, review guide, overview structure and the usage and documentation sections of the page. The manual step-by-step for moving to a newer download now points to `update.py`; export and import remain as backup and manual path.
+
+### Notes
+
+- `update.py check` and `apply` without a ZIP are the only network access in the project: read-only GET requests to api.github.com. Nothing is uploaded. A private repository needs the environment variable `GITHUB_TOKEN`.
+- Extra files you added inside the managed folders (`tools/`, `tests/`, `assets/`, `docs/`, `examples/`) are removed by an update; they are listed in the preview and kept in the backup.
+- Upgrade from 1.3.0 or older: copies of those versions have no `update.py`, so use the manual path once (export, import, copy `reports/` and your `CLAUDE.md` decisions by hand). From 1.4.0 on, `update.py` does it.
+- Only text between the USER markers in `CLAUDE.md` is kept; text outside is replaced. Rollback also reverts reports and data created since the update (a safety backup is made first).
+- Safety limits: downloads and unpacked ZIPs are capped at 200 MB (ZIPs at 10,000 members), redirects to non-https URLs are refused, and files that are symlinks are replaced, never written through.
+
 ## 1.3.0 – 2026-11-20
 
 ### Added

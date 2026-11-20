@@ -7,7 +7,8 @@ Usage:  python3 -I tools/import_data.py <file.json> [--replace] [path-to-html]
 
 import   Reads <file.json> (same shape as examples/sample-data.json: the ten blocks meta, plugins,
          claudeai-skills, mcp, builtin, candidates, overlaps, open-items, tokens, history; a missing block is
-         treated as empty, unknown keys are errors). First writes the blocks into a temporary copy of the
+         treated as empty, unknown keys are errors; meta.schema_version missing = schema 0, migrated to the
+         current one by tools/schema.py, a newer one than the tools know is an error). First writes the blocks into a temporary copy of the
          page and builds it there; any schema error is reported and nothing is touched. Then writes the
          blocks into the page and runs tools/build_overview.py. Refuses (page unchanged) if the page
          already holds data, sample or real, unless --replace is given. <file.json> is never modified.
@@ -37,6 +38,7 @@ def load_sample_tools():
 
 
 SD = load_sample_tools()
+SCHEMA = SD.SCHEMA
 BLOCKS = SD.BLOCKS
 EMPTY = SD.EMPTY
 
@@ -70,7 +72,11 @@ def load_input(path):
     unknown = [k for k in raw if k not in BLOCKS]
     if unknown:
         raise SystemExit("ERROR: unknown key(s) in %s: %s (allowed: %s)" % (path, ", ".join(unknown), ", ".join(BLOCKS)))
-    return {n: raw.get(n, EMPTY[n]) for n in BLOCKS}
+    blocks = {n: raw.get(n, EMPTY[n]) for n in BLOCKS}
+    try:  # files without schema_version count as schema 0 and are migrated to the current one
+        return SCHEMA.migrate(blocks, SCHEMA.version_of(blocks))
+    except ValueError as e:
+        raise SystemExit("ERROR: %s: %s" % (path, e))
 
 
 def build(path):
@@ -147,6 +153,7 @@ def do_export(dest, page):
         print("ERROR: the export file must not be the page itself.")
         return 1
     blocks = SD.read_blocks(read_page(page))
+    blocks = SCHEMA.migrate(blocks, SCHEMA.version_of(blocks))  # always written with schema_version
     with open(dest, "w", encoding="utf-8", newline="\n") as f:
         json.dump(blocks, f, ensure_ascii=False, indent=2)
         f.write("\n")

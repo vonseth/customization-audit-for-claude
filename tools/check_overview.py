@@ -26,7 +26,7 @@ Checks (the expected values are computed from the JSON data blocks of the page):
      (missing font files = WARNING; with --strict = FAIL).
  12  History: data-history is sorted with unique dates; with two or more snapshots the token card shows exactly
      one row per snapshot (date, tokens, numbers, bar width scaled to the maximum), with fewer none.
- 13  Tool documentation: every tools/*.py (except paths.py) is mentioned by file name in README.md or
+ 13  Tool documentation: every tools/*.py (except the internal modules paths.py and schema.py) is mentioned by file name in README.md or
      docs/manual.md (missing = WARNING; with --strict = FAIL).
  14  Optional (--inventory FILE, the TSV written by tools/inventory.py): every inventory entry of the kinds
      local-plugin, desktop-plugin, claude-ai-skill and own-skill appears on the page (FAIL if not);
@@ -590,7 +590,7 @@ def check_mcp_cost(text, data):
 
 
 def check_tool_docs(base, strict):
-    """Every tools/*.py (except paths.py) must be named in README.md or docs/manual.md."""
+    """Every tools/*.py (except the internal modules paths.py and schema.py) must be named in README.md or docs/manual.md."""
     tools = os.path.join(base, "tools")
     if not os.path.isdir(tools):
         return [], []
@@ -601,7 +601,7 @@ def check_tool_docs(base, strict):
         except OSError:
             pass
     missing = ["tools/%s is not mentioned in README.md or docs/manual.md" % f
-               for f in sorted(os.listdir(tools)) if f.endswith(".py") and f != "paths.py" and f not in corpus]
+               for f in sorted(os.listdir(tools)) if f.endswith(".py") and f not in ("paths.py", "schema.py") and f not in corpus]
     return (missing, []) if strict else ([], missing)
 
 

@@ -53,6 +53,8 @@ The full walkthrough is in [getting started](getting-started.md). In short:
 4. **Say hello.** Type, for example: "Start the customization audit." Claude reads `CLAUDE.md`, sees that the overview is still empty and asks you once whether you want to see the sample overview first or start the first audit.
 5. **Open `audit-overview.html`** in your browser (double-click the file).
 
+The file `VERSION` in the project folder holds the installed version; `python3 -I tools/update.py check` compares it with the latest release (see [Updating to a new version](#updating-to-a-new-version)).
+
 ### Sample data
 
 The sample data is fictional. It fills every part of the overview so you can see what a finished audit looks like. Claude runs these commands for you, and you can run them yourself:
@@ -78,7 +80,7 @@ python3 -I tools/import_data.py --export my-audit.json
 python3 -I tools/import_data.py ../my-audit.json
 ```
 
-The first command runs in the old copy, the second in the new one (adjust the path to the file). Details and a step-by-step guide are in [section 6](#moving-your-data-to-a-newer-download).
+The first command runs in the old copy, the second in the new one (adjust the path to the file). From 1.4.0 on, `tools/update.py` does this for you for a newer version of the project itself ([section 6](#updating-to-a-new-version)); the manual path is described under [Backup and moving data](#moving-your-data-by-hand).
 
 ### Your first real audit
 
@@ -377,11 +379,37 @@ Add these as candidates:
 
 Allowed values for `kind`: `connector`, `mcp-server`, `plugin`, `skill`, `other`. The address must start with `https://`. Optional keys: `kind_detail`, `provider`, `purpose`, `overlaps_with`, `note`, `discussed` (true or false, default false) and `removal_reason`. A candidate with a non-empty `removal_reason` moves to the archive. Text fields can be plain text or an object with `en` and `de` texts. The full list is in the docstring of `tools/build_overview.py` and in the [overview structure](overview-structure.md). Normally you do not edit this yourself; Claude does.
 
+### Updating to a new version
+
+Copies of version 1.3.0 or older do not contain `update.py` yet. For the first move to 1.4.0, download 1.4.0 and use the manual path (export in the old copy, import in the new one, then copy `reports/` and your `CLAUDE.md` decisions by hand). From 1.4.0 on, `update.py` does this for you.
+
+`tools/update.py` brings your copy to the newest release without losing your data. Run it only when you want to update; Claude runs it only on your request and never answers its confirmation question for you.
+
+```text
+python3 -I tools/update.py check
+python3 -I tools/update.py apply
+```
+
+- **`check`** reads the file `VERSION`, asks GitHub for the latest release of this project and prints the installed and the latest version and the release notes. If you are offline or GitHub does not answer, it says so calmly and changes nothing.
+- **`apply`** downloads the latest release and shows a preview: which managed files are replaced, added or removed, what is kept, and which extra files of yours it found. You confirm with "y". Then it makes a **full backup** of the project folder (with `backup.py`, reason `before-update-<old>-to-<new>`), replaces the managed files, carries over your page data (migrated to the current data format) and your `CLAUDE.md` sections, builds the page and runs the checks and the self-test. If anything fails, the backup is restored automatically. The name of the backup is written to `.update-state.json`.
+- **Offline:** download the release ZIP in a browser and run `python3 -I tools/update.py apply <release.zip>`. No network is used.
+- **`rollback`** restores the project folder from the backup of the last update, after a confirmation and a safety backup of the current state. Files created since the update are removed, so reports and data created since the update are reverted too.
+- **Git users:** an update refuses to run in a git checkout. Run `git pull`, then `python3 -I tools/update.py migrate`. It only migrates the data format of the page and adds the markers to `CLAUDE.md`; no files are replaced. It backs up those two files first.
+- **Private repository:** set the environment variable `GITHUB_TOKEN` to a token that can read the repository. It is sent only to api.github.com and never printed. Without it, a private repository answers "not found".
+
+**What is replaced** (managed files): `tools/`, `tests/`, `assets/`, `docs/`, `examples/`, `README.md`, `LICENSE`, `CHANGELOG.md`, `DESIGN.md`, `VERSION`, `.gitignore`, the generated parts of `audit-overview.html` and the rules part of `CLAUDE.md`.
+
+**What is kept:** your reports in `reports/`; all data blocks of the overview page; the sections of `CLAUDE.md` between `<!-- USER:START name -->` and `<!-- USER:END name -->` (your decisions and the status); and every extra file outside the managed folders. Only text between the USER markers in `CLAUDE.md` is kept; put your own additions there. Text outside the markers is replaced.
+
+**Warning:** extra files you added *inside* the managed folders (`tools/`, `tests/`, `assets/`, `docs/`, `examples/`) are removed by an update. They appear in the preview under "removed" and are in the backup, so nothing is lost for good. Keep your own files elsewhere.
+
+A downgrade is refused unless you add `--allow-downgrade`. A ZIP that is not a release of this project is refused.
+
 ### Backup and moving data
 
-Your audit data lives in the data blocks at the end of `audit-overview.html`. A JSON export is both a backup and the way to move to a newer download of the project.
+Your audit data lives in the data blocks at the end of `audit-overview.html`. A JSON export is both a backup and a way to move your data by hand. From 1.4.0 on, prefer `update.py` to move to a newer version of the project (above).
 
-#### Moving your data to a newer download
+#### Moving your data by hand
 
 1. **In the old copy**, write the data out:
 
@@ -404,7 +432,7 @@ Your audit data lives in the data blocks at the end of `audit-overview.html`. A 
    python3 -I tools/check_overview.py
    ```
 
-5. **Copy by hand** what is not part of the file: your reports in `reports/`, the decisions in `CLAUDE.md`, and `assets/` if you changed anything there.
+5. **Copy by hand** what is not part of the file: your reports in `reports/`, your decisions and status (paste them into the sections between the `USER:START` and `USER:END` markers of the new `CLAUDE.md`), and `assets/` if you changed anything there.
 
 If the page in the new copy already holds data (the sample or your own), the import refuses and tells you so. Add `--replace` to overwrite it, for example to replace the sample:
 
@@ -419,9 +447,9 @@ The import file is never modified. Exporting and importing again gives a byte-id
 ## 7. Security and privacy
 
 - **What the tools read.** Only local files: `~/.claude` (plugins, settings, your skills and agents, session transcripts, history) and the Claude desktop app's data folder (plugin lists, claude.ai skills). The usage counters read your transcripts and report names and numbers only, never the contents.
-- **What they write.** Inside this project folder only, with one exception. The inventory, counters, `diff_inventory.py` and `check_versions.py` only read; the build script, `tools/sample_data.py`, `tools/import_data.py`, `tools/history.py` and `tools/mcp_cost.py --write` write only the overview page; the optional output file of the inventory goes where you tell it. **The exception is `tools/backup.py`:** it writes backups to `~/.claude/backups/` and, when you restore a backup and confirm, to the original paths listed in that backup's manifest. It never deletes your files (it only removes its own unfinished backup folder after a failed create) and refuses manifests that point outside your home folder.
+- **What they write.** Inside this project folder only, with one exception. The inventory, counters, `diff_inventory.py` and `check_versions.py` only read; the build script, `tools/sample_data.py`, `tools/import_data.py`, `tools/history.py` and `tools/mcp_cost.py --write` write only the overview page; the optional output file of the inventory goes where you tell it. **The exception is `tools/backup.py`** (which `update.py` also calls for its full backup before an update; `update.py` itself writes only inside the project folder)**:** it writes backups to `~/.claude/backups/` and, when you restore a backup and confirm, to the original paths listed in that backup's manifest. It never deletes your files (it only removes its own unfinished backup folder after a failed create) and refuses manifests that point outside your home folder.
 - **Your own `/context` output.** `mcp_cost.py` only reads text you give it. It never starts Claude and never reads `~/.claude`.
-- **No network.** The tools use no network access. The overview page has no external resources; its stylesheet and fonts are embedded.
+- **Network.** Only `tools/update.py` uses the network, and only when you run `check` or `apply` without a ZIP file: read-only GET requests to api.github.com for the latest release of this project and the download of that release. Nothing is uploaded. A `GITHUB_TOKEN` (private repositories) goes only to api.github.com. All other tools use no network. The overview page has no external resources; its stylesheet and fonts are embedded.
 - **Backups.** Before every change Claude saves what it is about to change to `~/.claude/backups/<reason>-<date>/` on your computer. A restore overwrites files only after your explicit confirmation.
 - **Nothing is sent to third parties by this project.** The reports and the overview stay on your computer; what you share is up to you. Note that the audit runs in your own Claude session as usual, so what Claude reads in a session is processed like any other session content.
 - **Your data in files.** Reports, the export file and `CLAUDE.md` decisions may contain names of your customizations and notes about your work. Do not publish them without looking.
@@ -507,6 +535,21 @@ The token card's MCP line counts only what is permanent: loaded tools plus serve
 **25. Can Claude run `/context` for me?**
 No. You run it in a Claude Code session and hand over the text. That keeps the measurement in your control and the tool free of any access to your Claude installation.
 
+**26. `update.py check` says I seem to be offline.**
+The tool could not reach api.github.com (no network, a proxy or firewall, or GitHub is down). Nothing was changed. Try again later, or download the release ZIP in a browser and run `python3 -I tools/update.py apply <release.zip>`.
+
+**27. `update.py check` reports "not found" (404) for the repository.**
+If the repository is private, GitHub answers 404 without a token. Set the environment variable `GITHUB_TOKEN` to a token that can read it, then run the command again.
+
+**28. I edited a documentation file and the update replaced it.**
+Files in the managed folders (and `README.md`, `CHANGELOG.md` and so on) are replaced on purpose. Your copy is in the backup named in the output (and in `.update-state.json`), under `~/.claude/backups/`. Put your own notes into your `CLAUDE.md` sections between the USER markers or into files outside the managed folders; those survive.
+
+**29. How do I undo an update?**
+Run `python3 -I tools/update.py rollback`. It shows what will be restored, asks for confirmation, makes a safety backup of the current state first and restores the project folder from the backup of the last update.
+
+**30. "The data has schema version N, but these tools only know up to M".**
+Your page data was written by a newer version of the tools than the one you are running (for example after copying a page from a newer copy). Update the tools first with `python3 -I tools/update.py check` and `apply`; do not edit the number by hand.
+
 ---
 
 ## 9. Glossary
@@ -540,5 +583,8 @@ No. You run it in a Claude Code session and hand over the text. That keeps the m
 | Manifest | The file `manifest.json` in a backup folder: original path, stored copy, type, checksum and size of every item. Restore uses it; older backups have none. |
 | Snapshot | One entry in the history of your audits: date, permanent tokens, installed, removed and candidates. Stored by `history.py` at the end of an audit. |
 | Deferred | Tools that are not loaded at the start of a session but only when needed. They cost no permanent context until used; `/context` reports them separately. |
+| Schema version | The data format of the page data, stored as `schema_version` in the block `data-meta`. A missing value means schema 0 (data from versions before 1.4.0). Update, import and `migrate` bring the data to the format the tools expect. |
+| Managed files | The files an update replaces: the tool, test, asset, documentation and example folders, the top-level project files and the rules part of `CLAUDE.md`. Your reports, page data and USER sections are not managed. |
+| USER markers | The lines `<!-- USER:START name -->` and `<!-- USER:END name -->` in `CLAUDE.md`. What stands between them is yours; an update carries it over unchanged. Text outside the markers is replaced. |
 | Data block | The JSON text at the end of `audit-overview.html` that holds your data; the visible page is built from it. |
 | Sample data | Fictional entries that fill the page so you can see how an audit looks; removable. |

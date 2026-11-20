@@ -21,7 +21,8 @@ A toolkit and working method to audit and tidy the customizations of your Claude
 | **Guided decisions** | Claude explains one customization at a time in a fixed structure and asks before it changes anything; a backup comes first. |
 | **Candidates** | Keeps a list of things you might install later, researched but not installed, until you decide. |
 | **Overview page** | One self-contained HTML file (`audit-overview.html`) with status, tokens, overlaps and open items; offline, without JavaScript, also on a phone; English or German by browser language, with a DE \| EN toggle. |
-| **Export and import** | Saves all audit data to one JSON file and brings it into a fresh or newer download, so you never redo the first review. |
+| **Self-update** | `update.py` moves your copy to the newest release: preview, your confirmation, a full backup first; your data and your own `CLAUDE.md` sections are kept, and a failed update is restored automatically. |
+| **Export and import** | Saves all audit data to one JSON file as a backup, or moves it into a fresh download by hand. |
 | **Sample data** | Fictional entries to see a filled page before your first audit; removable with one command. |
 | **Checks** | Scripts that rebuild the page from its data and verify it (counts, links, both languages, no external resources). |
 
@@ -42,19 +43,22 @@ Or, if you know git: `git clone https://github.com/vonseth/customization-audit-f
 
 The full walkthrough, including troubleshooting, is in [docs/getting-started.md](docs/getting-started.md). Everything about using the project day to day is in the [user manual](docs/manual.md).
 
-## Export and import
+## Updating
 
-All data of your overview page, including the history of your audits, fits into one JSON file. Use it as a backup, or to move your audit into a fresh or newer download without repeating the first review.
+Copies of version 1.3.0 or older do not contain `update.py` yet. For the first move to 1.4.0, download 1.4.0 and use the manual path (export in the old copy, import in the new one, then copy `reports/` and your `CLAUDE.md` decisions by hand). From 1.4.0 on, `update.py` does this for you.
 
-1. **Export** in your current copy (open a terminal in the project folder):
-   `python3 -I tools/import_data.py --export my-audit.json`
-2. **Download** the new version and unzip it (see Download).
-3. **Import** in the new copy:
-   `python3 -I tools/import_data.py ../path/to/my-audit.json`
-   The tool checks the file on a temporary copy first, then writes the data and rebuilds the page. If the page already holds data (for example the sample), add `--replace`.
-4. **Check** the result: `python3 -I tools/check_overview.py`, then open `audit-overview.html`.
+To move your copy to a newer release, open a terminal in the project folder:
 
-The export file describes your personal setup. Keep it private; never commit it to a public repository. You can also simply tell Claude "Export my audit data" or "Import my audit data from …".
+1. **Check** what is new: `python3 -I tools/update.py check`. It shows the installed and the latest version and the release notes.
+2. **Apply** the update: `python3 -I tools/update.py apply`. You first see a preview (files replaced, added or removed; what is kept) and are asked to confirm. Then a full backup of the project folder is made, the files are replaced, your data is carried over (and migrated to the current data format if needed) and the page is rebuilt and checked. If anything fails, the backup is restored automatically.
+3. **Without network:** download the release ZIP by hand and run `python3 -I tools/update.py apply <release.zip>`.
+4. **Undo:** `python3 -I tools/update.py rollback` restores the state from before the last update (after a confirmation). Rollback also reverts reports and data created since the update (a safety backup is made first).
+
+What is kept: your reports in `reports/`, all data on the overview page, the sections of your `CLAUDE.md` between the `USER:START` and `USER:END` markers, and any extra files outside the managed folders. Only text between the USER markers in `CLAUDE.md` is kept; put your own additions there. Text outside the markers is replaced. Extra files you added inside `tools/`, `tests/`, `assets/`, `docs/` or `examples/` are removed by an update; they show up in the preview and are in the backup.
+
+If you installed with git, run `git pull` and then `python3 -I tools/update.py migrate`; it only migrates the data format and adds the markers to `CLAUDE.md`. For a private repository set the environment variable `GITHUB_TOKEN`. Details and troubleshooting are in the [user manual](docs/manual.md#updating-to-a-new-version).
+
+You can still use export and import as a backup or to move your data by hand: `python3 -I tools/import_data.py --export my-audit.json` in the old copy, `python3 -I tools/import_data.py my-audit.json` in the new one (add `--replace` if the page already holds data). The export file describes your personal setup. Keep it private; never commit it to a public repository.
 
 ## Platform support
 
@@ -71,7 +75,7 @@ The export file describes your personal setup. Keep it private; never commit it 
 
 ## Privacy
 
-The tools only read local files. Everything they write stays inside this project folder, with one exception: `backup.py` writes backups to `~/.claude/backups/` and, when you restore a backup and confirm, to the original paths recorded in that backup. No tool uses the network. Reports and the overview page stay on your computer; what you share is up to you. Claude itself runs in your own session as usual.
+The tools only read local files. Everything they write stays inside this project folder, with one exception: `backup.py` (also called by `update.py` for its backup) writes backups to `~/.claude/backups/` and, when you restore a backup and confirm, to the original paths recorded in that backup. The only tool that uses the network is `update.py`, and only when you run `check` or `apply` without a ZIP file: it sends read-only GET requests to api.github.com for the latest release of this project and downloads that release; nothing is ever uploaded. `backup.py` remains the only tool that writes outside the project folder. For a private repository the token in `GITHUB_TOKEN` is sent only to api.github.com. Reports and the overview page stay on your computer; what you share is up to you. Claude itself runs in your own session as usual.
 
 ## Folder overview
 
@@ -79,7 +83,7 @@ The tools only read local files. Everything they write stays inside this project
 |---|---|
 | `audit-overview.html` | The overview page (generated parts plus your data) |
 | `CLAUDE.md` | Project memory for Claude: working rules and your own decisions |
-| `docs/manual.md` | User manual: reading the page, audits, decisions, candidates, export and import, FAQ |
+| `docs/manual.md` | User manual: reading the page, audits, decisions, candidates, updating, export and import, FAQ |
 | `docs/getting-started.md` | Set up and run the first audit |
 | `docs/review-guide.md` | The audit method |
 | `docs/explanation-template.md` | Fixed structure of each explanation of a customization |
@@ -90,11 +94,12 @@ The tools only read local files. Everything they write stays inside this project
 | `examples/` | Fictional sample data |
 | `reports/` | Your audit report and sub-agent reports (created during the first audit) |
 | `DESIGN.md` | Design basis of the overview page |
+| `VERSION` | Installed version of the project (read by `update.py` and `backup.py`) |
 | `CHANGELOG.md` | Versions and changes |
 
 ## Tools
 
-All scripts are in `tools/`, use only the Python standard library and are started like `python3 -I tools/<name>.py`. Claude runs them for you; `--help` or the first lines of each file explain the options.
+All scripts are in `tools/`, use only the Python standard library and are started like `python3 -I tools/<name>.py`. Claude runs them for you; `--help` or the first lines of each file explain the options. `paths.py` and `schema.py` are internal modules and not started directly.
 
 | Tool | Writes | What it does |
 |---|---|---|
@@ -111,6 +116,7 @@ All scripts are in `tools/`, use only the Python standard library and are starte
 | `check_overview.py` | nothing | Verifies the page (15 checks), including the documentation of the tools. |
 | `sample_data.py` | the page | Loads, removes or reports the fictional sample data. |
 | `import_data.py` | the page | Imports audit data from a JSON file or exports it. |
+| `update.py` | project folder; backup through `backup.py` | Updates to the newest release (`check`, `apply`, `rollback`, `migrate`); the only tool that uses the network. |
 | `selftest.py` | temporary folder | Runs every tool against a fake home folder. |
 
 ## Support

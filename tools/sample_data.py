@@ -15,6 +15,7 @@ status  prints whether sample data is loaded.
 
 Standard library only.
 """
+import importlib.util
 import json
 import os
 import re
@@ -26,8 +27,20 @@ SAMPLE = os.path.join(HERE, "..", "examples", "sample-data.json")
 BUILDER = os.path.join(HERE, "build_overview.py")
 BLOCKS = ["meta", "plugins", "claudeai-skills", "mcp", "builtin", "candidates", "overlaps", "open-items", "tokens",
           "history"]
-EMPTY = {"meta": {"as_of": None}, "plugins": [], "claudeai-skills": [], "mcp": [], "builtin": [], "candidates": [],
+EMPTY = {"meta": {"as_of": None, "schema_version": 1}, "plugins": [], "claudeai-skills": [], "mcp": [], "builtin": [], "candidates": [],
          "overlaps": {"measured_on": None, "fields": []}, "open-items": [], "tokens": None, "history": []}
+
+
+def load_schema():
+    """tools/schema.py by file path (isolated mode has no import path to this folder)."""
+    spec = importlib.util.spec_from_file_location("schema", os.path.join(HERE, "schema.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+SCHEMA = load_schema()
+assert EMPTY["meta"]["schema_version"] == SCHEMA.CURRENT
 
 
 def pattern(name):
@@ -55,7 +68,15 @@ def is_sample(blocks):
 def has_real_data(blocks):
     if is_sample(blocks):
         return False
-    return any(blocks[n] != EMPTY[n] for n in BLOCKS)
+    for n in BLOCKS:
+        cur = blocks[n]
+        if n == "meta" and isinstance(cur, dict):  # the version stamp alone is not data
+            cur = {k: v for k, v in cur.items() if k != "schema_version"}
+            if cur == {k: v for k, v in EMPTY[n].items() if k != "schema_version"}:
+                continue
+        if cur != EMPTY[n]:
+            return True
+    return False
 
 
 def write_blocks(html, values):
@@ -92,7 +113,7 @@ def main():
         if not isinstance(sample, dict) or not isinstance(sample.get("meta"), dict) or sample["meta"].get("sample") is not True:
             print("ERROR: examples/sample-data.json must carry meta.sample = true. Nothing was changed.")
             return 1
-        values = {n: sample[n] for n in BLOCKS}
+        values = SCHEMA.migrate({n: sample[n] for n in BLOCKS}, SCHEMA.version_of(sample))
     else:
         values = EMPTY
     new = write_blocks(html, values)

@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 # raw inventory output of tools/inventory.py; the reports themselves stay tracked
 reports/*.tsv
+# backup pointer written by tools/update.py
+.update-state.json

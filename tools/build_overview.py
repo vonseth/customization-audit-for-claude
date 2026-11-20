@@ -30,6 +30,9 @@ data-meta   object
                                                         if null, tokens.measured_on is used, else "As of -"
   sample         bool   true = the page holds fictional sample data (tools/sample_data.py); a bilingual
                         notice is shown at the top of the page (default false)
+  schema_version int    data format version (tools/schema.py, currently 1); a missing value means data from
+                        before 1.4.0 (tools/import_data.py and tools/update.py migrate it); a higher number than
+                        the tools know is an error
 
 data-plugins   list of objects, one per installed or removed plugin / own skill
   name*          string
@@ -115,6 +118,7 @@ candidates that are not removed and have discussed = false.
 """
 import base64
 import datetime
+import importlib.util
 import json
 import os
 import re
@@ -445,16 +449,33 @@ def validate_history(raw):
     return out
 
 
+def check_schema_version(v):
+    """Optional data format version: None (older data) or an integer from 1 to schema.CURRENT."""
+    if v is None:
+        return None
+    here = os.path.dirname(os.path.abspath(__file__))
+    spec = importlib.util.spec_from_file_location("schema", os.path.join(here, "schema.py"))
+    sch = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sch)
+    if isinstance(v, bool) or not isinstance(v, int) or v < 1:
+        raise Fail("data-meta, key schema_version: integer >= 1 expected")
+    if v > sch.CURRENT:
+        raise Fail("data-meta, key schema_version: %d is newer than these tools understand (%d); "
+                   "update the tools (python3 -I tools/update.py check)" % (v, sch.CURRENT))
+    return v
+
+
 def load_all(html):
     """Reads and validates all blocks; returns a dict of normalized data."""
     data = {}
     for name in BLOCKS:
         raw = read_block(html, name)
         if name == "meta":
-            if not isinstance(raw, dict) or set(raw) - {"as_of", "sample"}:
-                raise Fail("data-meta: object with the optional keys as_of and sample expected")
+            if not isinstance(raw, dict) or set(raw) - {"as_of", "sample", "schema_version"}:
+                raise Fail("data-meta: object with the optional keys as_of, sample and schema_version expected")
             data[name] = {"as_of": conv(raw.get("as_of"), D, "data-meta, key as_of"),
-                          "sample": conv(raw.get("sample", False), B, "data-meta, key sample")}
+                          "sample": conv(raw.get("sample", False), B, "data-meta, key sample"),
+                          "schema_version": check_schema_version(raw.get("schema_version"))}
         elif name == "overlaps":
             data[name] = validate_overlaps(raw)
         elif name == "tokens":
