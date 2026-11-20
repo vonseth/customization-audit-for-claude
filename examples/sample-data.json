@@ -1,0 +1,1255 @@
+{
+  "meta": {
+    "as_of": "2026-01-15",
+    "sample": true
+  },
+  "plugins": [
+    {
+      "name": "notes-sync",
+      "source": "own-marketplace",
+      "status": "installed",
+      "category": {
+        "en": "Notes",
+        "de": "Notizen"
+      },
+      "purpose": {
+        "en": "Keeps project notes in sync across folders",
+        "de": "Hält Projektnotizen zwischen Ordnern synchron"
+      },
+      "tokens": "~210",
+      "usage": {
+        "en": "4 calls",
+        "de": "4 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Fictional marketplace example-org/sample-plugins",
+        "de": "Fiktiver Marktplatz example-org/sample-plugins"
+      },
+      "recommendation": {
+        "en": "Keep: small, local, no network",
+        "de": "Behalten: klein, lokal, kein Netz"
+      }
+    },
+    {
+      "name": "team-snippets",
+      "source": "own-marketplace",
+      "status": "installed",
+      "category": {
+        "en": "Productivity",
+        "de": "Produktivität"
+      },
+      "purpose": {
+        "en": "Shares reusable text snippets with a team",
+        "de": "Teilt wiederverwendbare Textbausteine im Team"
+      },
+      "tokens": "~140",
+      "usage": {
+        "en": "1 call",
+        "de": "1 call"
+      },
+      "discussed": false,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Fictional marketplace example-org/sample-plugins",
+        "de": "Fiktiver Marktplatz example-org/sample-plugins"
+      }
+    },
+    {
+      "name": "superpowers",
+      "source": "desktop",
+      "status": "installed",
+      "category": {
+        "en": "Development",
+        "de": "Entwicklung"
+      },
+      "purpose": {
+        "en": "Workflow skills for planning, debugging and review",
+        "de": "Workflow-Skills für Planung, Fehlersuche und Review"
+      },
+      "tokens": "~520",
+      "usage": {
+        "en": "12 calls",
+        "de": "12 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "skill-creator",
+      "source": "desktop",
+      "status": "installed",
+      "category": {
+        "en": "Development",
+        "de": "Entwicklung"
+      },
+      "purpose": {
+        "en": "Helps create and test new skills",
+        "de": "Hilft beim Erstellen und Testen neuer Skills"
+      },
+      "tokens": "~90",
+      "usage": {
+        "en": "2 calls",
+        "de": "2 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "image-generation",
+      "source": "desktop",
+      "status": "installed",
+      "category": {
+        "en": "Design",
+        "de": "Design"
+      },
+      "purpose": {
+        "en": "Guide for writing prompts for image models",
+        "de": "Leitfaden für Prompts an Bildmodelle"
+      },
+      "tokens": "~60",
+      "usage": {
+        "en": "1 call",
+        "de": "1 call"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "marketing",
+      "source": "desktop",
+      "status": "installed",
+      "category": {
+        "en": "Marketing",
+        "de": "Marketing"
+      },
+      "purpose": {
+        "en": "Skills for campaigns, content and reports",
+        "de": "Skills für Kampagnen, Inhalte und Berichte"
+      },
+      "tokens": "~480",
+      "usage": {
+        "en": "3 calls",
+        "de": "3 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "brand-voice",
+      "source": "desktop",
+      "status": "installed",
+      "category": {
+        "en": "Writing",
+        "de": "Schreiben"
+      },
+      "purpose": {
+        "en": "Applies brand guidelines to written content",
+        "de": "Wendet Markenrichtlinien auf Texte an"
+      },
+      "tokens": "~230",
+      "usage": {
+        "en": "2 calls",
+        "de": "2 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "legacy-formatter",
+      "source": "desktop",
+      "status": "removed",
+      "category": {
+        "en": "Development",
+        "de": "Entwicklung"
+      },
+      "purpose": {
+        "en": "Formatted code on every save",
+        "de": "Formatierte Code bei jedem Speichern"
+      },
+      "tokens": "~300",
+      "usage": {
+        "en": "0 calls",
+        "de": "0 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Fictional marketplace example-org/sample-plugins",
+        "de": "Fiktiver Marktplatz example-org/sample-plugins"
+      },
+      "recommendation": {
+        "en": "Replaced by the formatter of the editor",
+        "de": "Ersetzt durch den Formatierer des Editors"
+      }
+    },
+    {
+      "name": "frontend-design",
+      "source": "local",
+      "status": "installed",
+      "category": {
+        "en": "Design",
+        "de": "Design"
+      },
+      "purpose": {
+        "en": "Guidance for distinctive, intentional UI design",
+        "de": "Anleitung für eigenständiges, bewusstes UI-Design"
+      },
+      "tokens": "~80",
+      "usage": {
+        "en": "5 calls",
+        "de": "5 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "commit-commands",
+      "source": "local",
+      "status": "installed",
+      "category": {
+        "en": "Development",
+        "de": "Entwicklung"
+      },
+      "purpose": {
+        "en": "Commands for commits, pushes and pull requests",
+        "de": "Befehle für Commits, Pushes und Pull Requests"
+      },
+      "tokens": "~120",
+      "usage": {
+        "en": "9 calls",
+        "de": "9 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "feature-dev",
+      "source": "local",
+      "status": "installed",
+      "category": {
+        "en": "Development",
+        "de": "Entwicklung"
+      },
+      "purpose": {
+        "en": "Guided feature development with code exploration",
+        "de": "Geführte Feature-Entwicklung mit Code-Erkundung"
+      },
+      "tokens": "~110",
+      "usage": {
+        "en": "2 calls",
+        "de": "2 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "claude-md-management",
+      "source": "local",
+      "status": "installed",
+      "category": {
+        "en": "Development",
+        "de": "Entwicklung"
+      },
+      "purpose": {
+        "en": "Keeps CLAUDE.md files current",
+        "de": "Hält CLAUDE.md-Dateien aktuell"
+      },
+      "tokens": "~100",
+      "usage": {
+        "en": "3 calls",
+        "de": "3 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "claude-code-setup",
+      "source": "local",
+      "status": "installed",
+      "category": {
+        "en": "Development",
+        "de": "Entwicklung"
+      },
+      "purpose": {
+        "en": "Recommends automations for a codebase",
+        "de": "Empfiehlt Automatisierungen für eine Codebasis"
+      },
+      "tokens": "~70",
+      "usage": {
+        "en": "1 call",
+        "de": "1 call"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "playground",
+      "source": "local",
+      "status": "installed",
+      "category": {
+        "en": "Design",
+        "de": "Design"
+      },
+      "purpose": {
+        "en": "Builds small interactive HTML playgrounds",
+        "de": "Baut kleine interaktive HTML-Spielwiesen"
+      },
+      "tokens": "~65",
+      "usage": {
+        "en": "2 calls",
+        "de": "2 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "project-artifact",
+      "source": "local",
+      "status": "installed",
+      "category": {
+        "en": "Development",
+        "de": "Entwicklung"
+      },
+      "purpose": {
+        "en": "Publishes project pages as artifacts",
+        "de": "Veröffentlicht Projektseiten als Artefakte"
+      },
+      "tokens": "~75",
+      "usage": {
+        "en": "1 call",
+        "de": "1 call"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Official marketplace",
+        "de": "Offizieller Marktplatz"
+      }
+    },
+    {
+      "name": "demo-recorder",
+      "source": "local",
+      "status": "disabled",
+      "category": {
+        "en": "Development",
+        "de": "Entwicklung"
+      },
+      "purpose": {
+        "en": "Records terminal demos as GIFs",
+        "de": "Nimmt Terminal-Demos als GIF auf"
+      },
+      "tokens": "~160",
+      "usage": {
+        "en": "0 calls",
+        "de": "0 calls"
+      },
+      "discussed": false,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Fictional local folder",
+        "de": "Fiktiver lokaler Ordner"
+      },
+      "recommendation": {
+        "en": "Decide: re-enable or remove",
+        "de": "Entscheiden: wieder aktivieren oder entfernen"
+      }
+    },
+    {
+      "name": "old-linter-plugin",
+      "source": "local",
+      "status": "removed",
+      "category": {
+        "en": "Development",
+        "de": "Entwicklung"
+      },
+      "purpose": {
+        "en": "Ran a linter after each edit",
+        "de": "Führte nach jeder Änderung einen Linter aus"
+      },
+      "tokens": "~190",
+      "usage": {
+        "en": "0 calls",
+        "de": "0 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "recommendation": {
+        "en": "Removed: the project runs its linter in CI",
+        "de": "Entfernt: das Projekt prüft per CI"
+      }
+    },
+    {
+      "name": "tidy-prompts",
+      "source": "own-skill",
+      "status": "installed",
+      "category": {
+        "en": "Writing",
+        "de": "Schreiben"
+      },
+      "purpose": {
+        "en": "Rewrites rough prompts into clear instructions",
+        "de": "Schreibt grobe Prompts in klare Anweisungen um"
+      },
+      "tokens": "~85",
+      "usage": {
+        "en": "6 calls",
+        "de": "6 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Own folder ~/.claude/skills/",
+        "de": "Eigener Ordner ~/.claude/skills/"
+      },
+      "recommendation": {
+        "en": "Keep: most used own skill",
+        "de": "Behalten: meistgenutzter eigener Skill"
+      }
+    },
+    {
+      "name": "layout-polish",
+      "source": "own-skill",
+      "status": "installed",
+      "category": {
+        "en": "Design",
+        "de": "Design"
+      },
+      "purpose": {
+        "en": "Checks spacing and alignment of a page",
+        "de": "Prüft Abstände und Ausrichtung einer Seite"
+      },
+      "tokens": "~95",
+      "usage": {
+        "en": "1 call",
+        "de": "1 call"
+      },
+      "discussed": false,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Own folder ~/.claude/skills/",
+        "de": "Eigener Ordner ~/.claude/skills/"
+      },
+      "overlaps_with": {
+        "en": "frontend-design",
+        "de": "frontend-design"
+      }
+    },
+    {
+      "name": "release-notes-helper",
+      "source": "own-skill",
+      "status": "installed",
+      "category": {
+        "en": "Development",
+        "de": "Entwicklung"
+      },
+      "purpose": {
+        "en": "Drafts release notes from commit messages",
+        "de": "Entwirft Release Notes aus Commit-Nachrichten"
+      },
+      "tokens": "~70",
+      "usage": {
+        "en": "2 calls",
+        "de": "2 calls"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Own folder ~/.claude/skills/",
+        "de": "Eigener Ordner ~/.claude/skills/"
+      },
+      "overlaps_with": {
+        "en": "commit-commands",
+        "de": "commit-commands"
+      }
+    },
+    {
+      "name": "memo-drafter",
+      "source": "own-skill",
+      "status": "installed",
+      "category": {
+        "en": "Writing",
+        "de": "Schreiben"
+      },
+      "purpose": {
+        "en": "Drafts short internal memos",
+        "de": "Entwirft kurze interne Memos"
+      },
+      "tokens": "~55",
+      "usage": {
+        "en": "1 call",
+        "de": "1 call"
+      },
+      "discussed": true,
+      "external_data": {
+        "en": "-",
+        "de": "-"
+      },
+      "origin": {
+        "en": "Own folder ~/.claude/skills/",
+        "de": "Eigener Ordner ~/.claude/skills/"
+      },
+      "overlaps_with": {
+        "en": "tidy-prompts",
+        "de": "tidy-prompts"
+      }
+    }
+  ],
+  "claudeai-skills": [
+    {
+      "name": "pdf",
+      "status": "active",
+      "category": {
+        "en": "Documents",
+        "de": "Dokumente"
+      },
+      "purpose": {
+        "en": "Reads, merges and fills PDF files",
+        "de": "Liest, verbindet und füllt PDF-Dateien"
+      },
+      "tokens": "~55"
+    },
+    {
+      "name": "docx",
+      "status": "active",
+      "category": {
+        "en": "Documents",
+        "de": "Dokumente"
+      },
+      "purpose": {
+        "en": "Creates and edits Word documents",
+        "de": "Erstellt und bearbeitet Word-Dokumente"
+      },
+      "tokens": "~60"
+    },
+    {
+      "name": "xlsx",
+      "status": "active",
+      "category": {
+        "en": "Documents",
+        "de": "Dokumente"
+      },
+      "purpose": {
+        "en": "Creates and edits spreadsheets",
+        "de": "Erstellt und bearbeitet Tabellen"
+      },
+      "tokens": "~55"
+    },
+    {
+      "name": "pptx",
+      "status": "active",
+      "category": {
+        "en": "Documents",
+        "de": "Dokumente"
+      },
+      "purpose": {
+        "en": "Creates and edits slide decks",
+        "de": "Erstellt und bearbeitet Präsentationen"
+      },
+      "tokens": "~55"
+    },
+    {
+      "name": "slide-polisher",
+      "status": "removed",
+      "category": {
+        "en": "Documents",
+        "de": "Dokumente"
+      },
+      "purpose": {
+        "en": "Restyled slide decks automatically",
+        "de": "Gestaltete Präsentationen automatisch um"
+      },
+      "tokens": "~120",
+      "assessment": {
+        "en": "Removed: overlapped with another slide tool",
+        "de": "Entfernt: überschnitt sich mit einem anderen Folienwerkzeug"
+      }
+    }
+  ],
+  "mcp": [
+    {
+      "name": "acme-crm-connector",
+      "kind": "connector",
+      "status": "connected",
+      "purpose": {
+        "en": "Looks up customer records in a CRM",
+        "de": "Sucht Kundendatensätze in einem CRM"
+      },
+      "discussed": true,
+      "usage": {
+        "en": "7 calls",
+        "de": "7 calls"
+      },
+      "tokens": "~420",
+      "origin": {
+        "en": "Fictional connector from Acme",
+        "de": "Fiktiver Connector von Acme"
+      },
+      "login": {
+        "en": "Signed in with a read-only account",
+        "de": "Mit schreibgeschütztem Konto angemeldet"
+      },
+      "security": {
+        "en": "Sample finding: sends queries to the vendor",
+        "de": "Beispielbefund: sendet Anfragen an den Anbieter"
+      },
+      "recommendation": {
+        "en": "Keep while the CRM is in use",
+        "de": "Behalten, solange das CRM genutzt wird"
+      }
+    },
+    {
+      "name": "project-board-connector",
+      "kind": "connector",
+      "status": "connected",
+      "purpose": {
+        "en": "Reads and updates tasks on a project board",
+        "de": "Liest und ändert Aufgaben auf einem Projektboard"
+      },
+      "discussed": true,
+      "usage": {
+        "en": "15 calls",
+        "de": "15 calls"
+      },
+      "tokens": "~380",
+      "origin": {
+        "en": "Fictional connector from Example Boards",
+        "de": "Fiktiver Connector von Example Boards"
+      },
+      "login": {
+        "en": "Signed in with the team account",
+        "de": "Mit dem Teamkonto angemeldet"
+      },
+      "security": {
+        "en": "Sample finding: write access to tasks",
+        "de": "Beispielbefund: Schreibzugriff auf Aufgaben"
+      }
+    },
+    {
+      "name": "weather-widget-mcp",
+      "kind": "own-server",
+      "status": "connected",
+      "purpose": {
+        "en": "Returns a weather forecast for a city",
+        "de": "Liefert eine Wettervorhersage für eine Stadt"
+      },
+      "discussed": false,
+      "usage": {
+        "en": "2 calls",
+        "de": "2 calls"
+      },
+      "tokens": "~60",
+      "origin": {
+        "en": "Fictional own server in ~/.claude.json",
+        "de": "Fiktiver eigener Server in ~/.claude.json"
+      },
+      "login": {
+        "en": "No sign-in needed",
+        "de": "Keine Anmeldung nötig"
+      },
+      "security": {
+        "en": "Sample finding: version not pinned",
+        "de": "Beispielbefund: Version nicht festgelegt"
+      }
+    },
+    {
+      "name": "docs-search-ext",
+      "kind": "extension",
+      "status": "connected",
+      "purpose": {
+        "en": "Searches local documentation folders",
+        "de": "Durchsucht lokale Dokumentationsordner"
+      },
+      "discussed": true,
+      "usage": {
+        "en": "3 calls",
+        "de": "3 calls"
+      },
+      "tokens": "~90",
+      "origin": {
+        "en": "Fictional desktop extension",
+        "de": "Fiktive Desktop-Erweiterung"
+      },
+      "login": {
+        "en": "Allowed folder: Downloads only",
+        "de": "Freigegebener Ordner: nur Downloads"
+      }
+    },
+    {
+      "name": "acme-analytics",
+      "kind": "plugin-mcp",
+      "status": "not_signed_in",
+      "purpose": {
+        "en": "Reads campaign figures from an analytics tool",
+        "de": "Liest Kampagnenzahlen aus einem Analysewerkzeug"
+      },
+      "discussed": true,
+      "usage": {
+        "en": "–",
+        "de": "–"
+      },
+      "origin": {
+        "en": "Comes with the plugin marketing",
+        "de": "Kommt mit dem Plugin marketing"
+      },
+      "login": {
+        "en": "Not signed in",
+        "de": "Nicht angemeldet"
+      },
+      "recommendation": {
+        "en": "Leave as is; goes away with its plugin",
+        "de": "So lassen; entfällt mit seinem Plugin"
+      }
+    },
+    {
+      "name": "acme-chat",
+      "kind": "plugin-mcp",
+      "status": "not_signed_in",
+      "purpose": {
+        "en": "Posts messages to a team chat",
+        "de": "Sendet Nachrichten in einen Team-Chat"
+      },
+      "discussed": true,
+      "usage": {
+        "en": "–",
+        "de": "–"
+      },
+      "origin": {
+        "en": "Comes with the plugin brand-voice",
+        "de": "Kommt mit dem Plugin brand-voice"
+      },
+      "login": {
+        "en": "Not signed in",
+        "de": "Nicht angemeldet"
+      },
+      "recommendation": {
+        "en": "Leave as is; goes away with its plugin",
+        "de": "So lassen; entfällt mit seinem Plugin"
+      }
+    },
+    {
+      "name": "old-translate-connector",
+      "kind": "connector",
+      "status": "removed",
+      "purpose": {
+        "en": "Translated text through a web service",
+        "de": "Übersetzte Text über einen Webdienst"
+      },
+      "discussed": true,
+      "usage": {
+        "en": "–",
+        "de": "–"
+      },
+      "origin": {
+        "en": "Fictional connector",
+        "de": "Fiktiver Connector"
+      },
+      "recommendation": {
+        "en": "Disconnected: translation now done by Claude directly",
+        "de": "Getrennt: Übersetzung übernimmt jetzt Claude direkt"
+      }
+    },
+    {
+      "name": "stale-test-server",
+      "kind": "leftover",
+      "status": "removed",
+      "purpose": {
+        "en": "Test server left in the settings file",
+        "de": "Testserver, der in der Einstellungsdatei übrig war"
+      },
+      "discussed": true,
+      "usage": {
+        "en": "–",
+        "de": "–"
+      },
+      "origin": {
+        "en": "Fictional entry in ~/.claude.json",
+        "de": "Fiktiver Eintrag in ~/.claude.json"
+      },
+      "recommendation": {
+        "en": "Entry deleted from the settings file",
+        "de": "Eintrag aus der Einstellungsdatei gelöscht"
+      }
+    }
+  ],
+  "builtin": [
+    {
+      "name": "diff-viewer",
+      "id": "@builtin",
+      "function": {
+        "en": "Shows file changes side by side",
+        "de": "Zeigt Dateiänderungen nebeneinander"
+      },
+      "usage": {
+        "en": "–",
+        "de": "–"
+      },
+      "note": {
+        "en": "Sample entry; comes with app updates",
+        "de": "Beispieleintrag; kommt mit App-Updates"
+      }
+    },
+    {
+      "name": "diagram-tool",
+      "id": "@builtin",
+      "function": {
+        "en": "Draws simple charts and diagrams",
+        "de": "Zeichnet einfache Diagramme"
+      },
+      "usage": {
+        "en": "–",
+        "de": "–"
+      },
+      "note": {
+        "en": "Sample entry; comes with app updates",
+        "de": "Beispieleintrag; kommt mit App-Updates"
+      }
+    },
+    {
+      "name": "agents-md-reader",
+      "id": "@builtin",
+      "function": {
+        "en": "Reads AGENTS.md files in a project",
+        "de": "Liest AGENTS.md-Dateien in einem Projekt"
+      },
+      "usage": {
+        "en": "–",
+        "de": "–"
+      },
+      "note": {
+        "en": "Sample entry; comes with app updates",
+        "de": "Beispieleintrag; kommt mit App-Updates"
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "name": "acme-wiki-connector",
+      "kind": "connector",
+      "url": "https://example.com/acme-wiki",
+      "purpose": {
+        "en": "Search and read pages of a company wiki",
+        "de": "Seiten eines Firmenwikis suchen und lesen"
+      },
+      "provider": {
+        "en": "Fictional provider Acme",
+        "de": "Fiktiver Anbieter Acme"
+      },
+      "discussed": false
+    },
+    {
+      "name": "sample-lint-mcp",
+      "kind": "mcp-server",
+      "url": "https://example.org/sample-lint-mcp",
+      "purpose": {
+        "en": "Runs a style check on markdown files",
+        "de": "Prüft Markdown-Dateien auf Stil"
+      },
+      "provider": {
+        "en": "Fictional provider Example Org",
+        "de": "Fiktiver Anbieter Example Org"
+      },
+      "discussed": true,
+      "note": {
+        "en": "Sample note: nothing installed, security not reviewed",
+        "de": "Beispielhinweis: nichts installiert, Sicherheit nicht geprüft"
+      }
+    },
+    {
+      "name": "paper-notes",
+      "kind": "plugin",
+      "url": "https://example.com/paper-notes",
+      "purpose": {
+        "en": "Turns reading notes into a bibliography",
+        "de": "Macht aus Lesenotizen ein Literaturverzeichnis"
+      },
+      "provider": {
+        "en": "Fictional provider Paper Co",
+        "de": "Fiktiver Anbieter Paper Co"
+      },
+      "discussed": false,
+      "overlaps_with": {
+        "en": "notes-sync",
+        "de": "notes-sync"
+      }
+    },
+    {
+      "name": "doc-translator",
+      "kind": "skill",
+      "url": "https://example.org/doc-translator",
+      "purpose": {
+        "en": "Translates documents and keeps the layout",
+        "de": "Übersetzt Dokumente und behält das Layout"
+      },
+      "provider": {
+        "en": "Fictional provider Example Org",
+        "de": "Fiktiver Anbieter Example Org"
+      },
+      "discussed": true,
+      "kind_detail": {
+        "en": "single skill",
+        "de": "einzelner Skill"
+      }
+    },
+    {
+      "name": "color-palette-kit",
+      "kind": "other",
+      "url": "https://example.com/color-palette-kit",
+      "purpose": {
+        "en": "Collection of colour palettes for web projects",
+        "de": "Sammlung von Farbpaletten für Webprojekte"
+      },
+      "provider": {
+        "en": "Fictional provider Palette Studio",
+        "de": "Fiktiver Anbieter Palette Studio"
+      },
+      "discussed": true
+    },
+    {
+      "name": "pixel-art-skill",
+      "kind": "skill",
+      "url": "https://example.com/pixel-art-skill",
+      "purpose": {
+        "en": "Generates pixel art from a description",
+        "de": "Erzeugt Pixelgrafiken aus einer Beschreibung"
+      },
+      "provider": {
+        "en": "Fictional provider Pixel Co",
+        "de": "Fiktiver Anbieter Pixel Co"
+      },
+      "discussed": true,
+      "removal_reason": {
+        "en": "Not needed: no pixel art projects",
+        "de": "Nicht nötig: keine Pixelgrafik-Projekte"
+      }
+    },
+    {
+      "name": "chatbot-gateway",
+      "kind": "other",
+      "url": "https://example.org/chatbot-gateway",
+      "purpose": {
+        "en": "Routes requests to other model providers",
+        "de": "Leitet Anfragen an andere Modellanbieter weiter"
+      },
+      "provider": {
+        "en": "Fictional provider Gateway Org",
+        "de": "Fiktiver Anbieter Gateway Org"
+      },
+      "discussed": true,
+      "removal_reason": {
+        "en": "Not needed: only one account in use",
+        "de": "Nicht nötig: nur ein Konto in Gebrauch"
+      }
+    }
+  ],
+  "overlaps": {
+    "measured_on": "2026-01-15",
+    "fields": [
+      {
+        "topic": {
+          "en": "Interface and layout design",
+          "de": "Oberflächen- und Layoutgestaltung"
+        },
+        "responsible": {
+          "en": "frontend-design handles new UI work; playground builds quick prototypes; layout-polish only on request.",
+          "de": "frontend-design übernimmt neue UI-Arbeit; playground baut schnelle Prototypen; layout-polish nur auf Anfrage."
+        },
+        "members": [
+          {
+            "name": "frontend-design",
+            "tokens": 80,
+            "role": "core",
+            "uniqueness": 5,
+            "reason": {
+              "en": "Broadest guidance for UI work",
+              "de": "Breiteste Anleitung für UI-Arbeit"
+            },
+            "auto_start": true
+          },
+          {
+            "name": "playground",
+            "tokens": 65,
+            "role": "complement",
+            "uniqueness": 3,
+            "reason": {
+              "en": "Adds interactive prototypes",
+              "de": "Ergänzt interaktive Prototypen"
+            },
+            "auto_start": false
+          },
+          {
+            "name": "layout-polish",
+            "tokens": 95,
+            "role": "replaceable",
+            "uniqueness": 2,
+            "reason": {
+              "en": "Spacing checks are covered by the core",
+              "de": "Abstandsprüfung deckt der Kern ab"
+            },
+            "auto_start": false,
+            "replaceable_by": {
+              "en": "frontend-design",
+              "de": "frontend-design"
+            }
+          }
+        ]
+      },
+      {
+        "topic": {
+          "en": "Writing and notes",
+          "de": "Schreiben und Notizen"
+        },
+        "responsible": {
+          "en": "tidy-prompts handles prompt rewriting; notes-sync keeps notes; memo-drafter only for short memos.",
+          "de": "tidy-prompts schreibt Prompts um; notes-sync hält Notizen; memo-drafter nur für kurze Memos."
+        },
+        "members": [
+          {
+            "name": "tidy-prompts",
+            "tokens": 85,
+            "role": "core",
+            "uniqueness": 4,
+            "reason": {
+              "en": "Most used, clear scope",
+              "de": "Meistgenutzt, klarer Zweck"
+            },
+            "auto_start": true
+          },
+          {
+            "name": "notes-sync",
+            "tokens": 210,
+            "role": "complement",
+            "uniqueness": 3,
+            "reason": {
+              "en": "Different job: syncing, not writing",
+              "de": "Andere Aufgabe: Abgleich statt Schreiben"
+            },
+            "auto_start": true
+          },
+          {
+            "name": "memo-drafter",
+            "tokens": 55,
+            "role": "replaceable",
+            "uniqueness": 1,
+            "reason": {
+              "en": "Short memos work with the core skill",
+              "de": "Kurze Memos gelingen mit dem Kern-Skill"
+            },
+            "auto_start": false,
+            "replaceable_by": {
+              "en": "tidy-prompts",
+              "de": "tidy-prompts"
+            }
+          }
+        ]
+      },
+      {
+        "topic": {
+          "en": "Git and releases",
+          "de": "Git und Releases"
+        },
+        "responsible": {
+          "en": "commit-commands handles commits and pull requests; feature-dev guides larger changes; release-notes-helper only on request.",
+          "de": "commit-commands übernimmt Commits und Pull Requests; feature-dev führt größere Änderungen; release-notes-helper nur auf Anfrage."
+        },
+        "members": [
+          {
+            "name": "commit-commands",
+            "tokens": 120,
+            "role": "core",
+            "uniqueness": 5,
+            "reason": {
+              "en": "Covers the daily git workflow",
+              "de": "Deckt den täglichen Git-Ablauf ab"
+            },
+            "auto_start": true
+          },
+          {
+            "name": "feature-dev",
+            "tokens": 110,
+            "role": "complement",
+            "uniqueness": 4,
+            "reason": {
+              "en": "Adds planning for larger features",
+              "de": "Ergänzt Planung für größere Features"
+            },
+            "auto_start": true
+          },
+          {
+            "name": "release-notes-helper",
+            "tokens": 70,
+            "role": "replaceable",
+            "uniqueness": 2,
+            "reason": {
+              "en": "Notes can be drafted from commit logs",
+              "de": "Notizen lassen sich aus Commit-Logs entwerfen"
+            },
+            "auto_start": false,
+            "replaceable_by": {
+              "en": "commit-commands",
+              "de": "commit-commands"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "open-items": [
+    {
+      "en": "Decide on demo-recorder: re-enable or remove (sample item).",
+      "de": "demo-recorder klären: wieder aktivieren oder entfernen (Beispielpunkt)."
+    },
+    {
+      "en": "Review the three own skills that overlap with installed plugins (sample item).",
+      "de": "Die drei eigenen Skills prüfen, die sich mit installierten Plugins überschneiden (Beispielpunkt)."
+    },
+    {
+      "en": "Pin the version of weather-widget-mcp (sample item).",
+      "de": "Die Version von weather-widget-mcp festlegen (Beispielpunkt)."
+    }
+  ],
+  "tokens": {
+    "now": 4200,
+    "first_audit": 9800,
+    "measured_on": "2026-01-15",
+    "parts": [
+      {
+        "label": {
+          "en": "Desktop plugins",
+          "de": "Desktop-Plugins"
+        },
+        "tokens": 1900
+      },
+      {
+        "label": {
+          "en": "Local plugins",
+          "de": "Lokale Plugins"
+        },
+        "tokens": 1100
+      },
+      {
+        "label": {
+          "en": "Own skills",
+          "de": "Eigene Skills"
+        },
+        "tokens": 600
+      },
+      {
+        "label": {
+          "en": "claude.ai skills",
+          "de": "claude.ai-Skills"
+        },
+        "tokens": 600
+      }
+    ],
+    "note": {
+      "en": "All numbers in this sample are fictional.",
+      "de": "Alle Zahlen in diesem Beispiel sind fiktiv."
+    }
+  }
+}
