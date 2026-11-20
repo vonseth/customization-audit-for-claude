@@ -10,7 +10,7 @@
 4. **Open items:** one card per open point.
 5. **Tokens per session:** a dark card with "now" (and, if known, the value at the first audit), the saving, a stacked bar and a short note.
 6. **Overlaps:** topics where customizations overlap, with measured permanent tokens, responsibility and a role per member.
-7. **Customizations:** legend, search, sort and filters, jump chips to the groups, then the list in eight groups.
+7. **Customizations:** legend, search, sort and filters, a "Jump to:" row of links to the groups, then the list in eight groups.
 8. **Documentation, Glossary, Usage:** three collapsible sections, maintained by hand.
 9. **Footer** (note on the usage column, author, support link, license, "Not affiliated with Anthropic").
 10. **Data blocks** and the script.

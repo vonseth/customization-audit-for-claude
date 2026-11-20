@@ -572,7 +572,7 @@ def cand_kind(r):
     base = CAND_KIND_LABEL[r["kind"]]
     if r["kind_detail"].empty():
         return base
-    return Text("%s · %s" % (base.en, r["kind_detail"].en), "%s · %s" % (base.de, r["kind_detail"].de))
+    return Text("%s (%s)" % (base.en, r["kind_detail"].en), "%s (%s)" % (base.de, r["kind_detail"].de))
 
 
 def cand_entry(r):
@@ -752,7 +752,8 @@ def list_markup(data):
         else:
             z += group(gid, g[gid], None, none)
         chips.append(gid)
-    nav = ['<nav class="chips" %s>' % attr_i18n("aria-label", "Jump to a group", "Zu einer Gruppe springen")]
+    nav = ['<nav class="chips" %s>' % attr_i18n("aria-label", "Jump to a group", "Zu einer Gruppe springen"),
+           '<span class="chips-label">%s</span>' % bi("Jump to:", "Springen zu:")]
     for gid in chips:
         lab = CHIP_LABEL.get(gid, GROUP_TITLE[gid])
         nav.append('<a href="#%s">%s</a>' % (gid, bi(lab.en, lab.de)))
@@ -806,8 +807,8 @@ def sample_markup(data):
         return ""
     cmd = "<code>python3 -I tools/sample_data.py remove</code>"
     return '<div class="sample-banner" role="note">%s</div>' % bi_raw(
-        "<b>Sample data</b> &mdash; this is not your installation. Remove it with: " + cmd,
-        "<b>Beispieldaten</b> &mdash; das ist nicht deine Installation. Entfernen mit: " + cmd)
+        "<b>Sample data:</b> this is not your installation. Remove it with: " + cmd,
+        "<b>Beispieldaten:</b> das ist nicht deine Installation. Entfernen mit: " + cmd)
 
 
 def asof_markup(data):

@@ -21,7 +21,8 @@ Defined as variables in `:root`, with dark values under `prefers-color-scheme: d
 | Text (`--body`) | `#2b3540` | `#c9d2da` |
 | Text muted | `#56616c` | `#9aa6b1` |
 | Accent and links | `#0e6378` | `#6cc3d6` |
-| Callout (open items, sample notice) | `#0e6378` with white text | the same |
+| Callout (sample notice) | `#0e6378` with white text | the same |
+| Open-item tag | `#e1eef1` with `#0b4f60` | `#12313a` with `#9fd6e3` |
 | Tag installed | `#e3f1e7` on `#1f5f35` | `#183a26` on `#9fdcb4` |
 | Tag disabled | `#f6edd2` on `#6b4f00` | `#3a3014` on `#f0d48a` |
 | Tag removed | `#f6e1e1` on `#7f2a2a` | `#3d1d1d` on `#f2b1b1` |
@@ -49,13 +50,14 @@ A 4 px grid: 8, 12, 16, 24, 32, 48 px, and 96 px between sections (48 px on phon
 ## Components
 
 - **Key figure cards:** big slab number, short label; 3 columns, 2 on tablets, 1 on phones.
-- **Tags:** pills with a status dot and a word (installed, disabled, removed, built-in); candidates are outline only.
+- **Tags:** pills with a word only, colour by status (installed, disabled, removed, built-in); candidates are outline only.
 - **Filters and search:** pill-shaped filter buttons with a pressed state, a text input (16 px so phones do not zoom), a sort menu.
 - **Token card:** a dark card with "first audit" and "now" values, the saving, a stacked bar of up to four parts and a legend.
 - **Entries and groups:** each customization is a collapsible row (name, tag, tokens, purpose); groups have a heading with a count. Archives, the "not signed in" subgroup, the legend and the documentation sections are collapsible.
 - **Jump bar:** five entries (Open items, Tokens, Overlaps, Customizations, Help) and the DE | EN toggle; sticky from 1,024 px wide while scrolling.
-- **Group chips:** small pill links above the list that jump to a group.
-- **Callouts:** open items and the sample notice on the accent color.
+- **Group links:** a row "Jump to:" of underlined text links above the list that jump to a group; visibly different from the filter buttons.
+- **Open items:** light cards with a 3 px accent edge on the left and an "open" tag.
+- **Sample notice:** a callout on the accent color at the top of the page.
 - **Overlap topics:** collapsible cards with a bar (one segment per member) and, when open, a table with role and a five-box uniqueness rating.
 
 ## Accessibility

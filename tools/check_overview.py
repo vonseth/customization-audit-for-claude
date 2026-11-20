@@ -401,6 +401,8 @@ def check_jump(tree):
     for n in tree.all:
         if n.tag == "nav" and n.attrs.get("class") == "chips":
             for a in n.children:
+                if a.tag != "a":
+                    continue
                 h = a.attrs.get("href", "")
                 if not h.startswith("#") or h[1:] not in ids:
                     problems.append("jump chip target missing: %s" % h)

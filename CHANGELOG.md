@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 1.0.3 – 2026-11-20
+
+### Changed
+
+- Open items are light cards with an accent edge instead of full accent-colour blocks, so they no longer outshout the page and differ from the sample notice.
+- Group links above the list are a "Jump to:" row of underlined links, clearly different from the filter buttons.
+- Status tags show only the word, without the dot.
+- Sample notice uses a colon instead of a dash; candidate kinds read "Skill (single skill)" instead of a middle-dot chain.
+- Token card values are laid out on a grid (arrow centred without computed offsets); filter buttons no longer wrap; footer text measure 72 characters; key-figure cards set their own text colour.
+
+### Fixed
+
+- `check_overview.py` ignores the "Jump to:" label when it checks the group links.
+
 ## 1.0.2 – 2026-11-20
 
 ### Added
